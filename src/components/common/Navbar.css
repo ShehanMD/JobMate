@@ -4,7 +4,8 @@
   position: sticky;
   top: 0;
   z-index: 1000;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 5px solid #f1f5f9;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   width: 100%;
 }
 
@@ -22,20 +23,20 @@
 .navbar-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
   text-decoration: none;
 }
 
-.logo-symbol {
-  display: flex;
-  align-items: center;
+.logo-text {
+  font-size: 28px;
+  font-weight: 800;
+  color: #000000;
+  letter-spacing: -0.8px;
+  line-height: 1;
 }
 
-.logo-text {
-  font-size: 22px;
-  font-weight: 800;
-  color: #0f172a;
-  letter-spacing: -0.5px;
+.logo-accent {
+  color: #10B981;
+  font-weight: 900;
 }
 
 /* Nav Links */
@@ -184,4 +185,5 @@
   .menu-toggle:hover {
     background-color: #f1f5f9;
   }
+  
 }
