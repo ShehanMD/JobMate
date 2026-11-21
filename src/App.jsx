@@ -1,3 +1,16 @@
+
+import Home from "./pages/Home";
+import "./App.css";
+
+function App() {
+  return (
+    <div className="app">
+      <Home />
+    </div>
+  );
+}
+
+export default App;
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navbar from "./components/common/Navbar";
 import Footer from "./components/common/Footer";
