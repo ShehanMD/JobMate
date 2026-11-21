@@ -184,4 +184,24 @@
   .menu-toggle:hover {
     background-color: #f1f5f9;
   }
+ /* Admin Icon - Desktop */
+.admin-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #059669;
+  text-decoration: none;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(5, 150, 105, 0.25);
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.admin-icon-btn:hover {
+  background-color: rgba(16, 185, 129, 0.12);
+  border-color: #059669;
+  transform: translateY(-2px);
+}
 }

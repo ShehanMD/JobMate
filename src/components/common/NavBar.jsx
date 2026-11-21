@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { Menu, X, Sun, Moon, ChevronDown } from "lucide-react";
+import { Menu, X, Sun, Moon, ChevronDown, ShieldCheck } from "lucide-react";
 import "./Navbar.css";
 
 function Navbar() {
@@ -51,6 +51,9 @@ function Navbar() {
 
         {/* Desktop Right Actions */}
         <div className="navbar-actions">
+          <NavLink to="/admin/login" className="admin-icon-btn" title="Admin Panel">
+  <ShieldCheck size={20} />
+</NavLink>
           <button
             className="theme-toggle-btn"
             onClick={() => setIsDarkMode(!isDarkMode)}
