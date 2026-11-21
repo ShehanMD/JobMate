@@ -10,9 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "lucide-react": "^1.76.0",
+    "firebase": "^13.4.0",
+    "firebase-admin": "^14.5.1",
+    "lucide-react": "^1.77.0",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.6"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
