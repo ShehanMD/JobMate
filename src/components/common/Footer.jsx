@@ -6,14 +6,12 @@ function Footer() {
   return (
     <footer className="footer">
       <div className="footer-container">
-        {/* Brand Column */}
+        {/* Brand Column - Text Only Logo */}
         <div className="footer-brand">
           <Link to="/" className="footer-logo">
-            <svg width="28" height="24" viewBox="0 0 28 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M2 2L9.5 22L14 11L18.5 22L26 2" stroke="#10B981" strokeWidth="3.8" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M14 11L11.5 5" stroke="#34D399" strokeWidth="3.5" strokeLinecap="round"/>
-            </svg>
-            <span>Workora</span>
+            <span style={{ fontSize: "28px", fontWeight: 800, color: "#ffffff", letterSpacing: "-0.8px", lineHeight: 1 }}>
+              Patta<span style={{ fontSize: "28px", color: "#10B981", fontWeight: 900 }}>Jobs</span>
+            </span>
           </Link>
           <p className="footer-desc">
             Sri Lanka's modern platform connecting employers with job seekers
@@ -47,7 +45,7 @@ function Footer() {
           </div>
           <div className="contact-item">
             <Mail size={16} />
-            <span>hel**@workora.lk</span>
+            <span>hello@pattajobs.lk</span>
           </div>
           <div className="contact-item">
             <Phone size={16} />
@@ -59,7 +57,7 @@ function Footer() {
       {/* Bottom Bar */}
       <div className="footer-bottom">
         <div className="footer-bottom-container">
-          <p>© 2026 Workora. All rights reserved.</p>
+          <p>© 2026 PattaJobs. All rights reserved.</p>
           <div className="footer-legal">
             <Link to="/privacy">Privacy Policy</Link>
             <Link to="/terms">Terms & Conditions</Link>

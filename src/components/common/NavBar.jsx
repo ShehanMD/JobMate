@@ -12,15 +12,11 @@ function Navbar() {
   return (
     <nav className="navbar">
       <div className="navbar-container">
-        {/* Logo */}
+        {/* Logo - Text Only */}
         <NavLink to="/" className="navbar-logo" onClick={closeMenu}>
-          <div className="logo-symbol">
-            <svg width="28" height="24" viewBox="0 0 28 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M2 2L9.5 22L14 11L18.5 22L26 2" stroke="#059669" strokeWidth="3.8" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M14 11L11.5 5" stroke="#10B981" strokeWidth="3.5" strokeLinecap="round"/>
-            </svg>
-          </div>
-          <span className="logo-text">Workora</span>
+          <span className="logo-text">
+            Patta<span className="logo-accent">Jobs</span>
+          </span>
         </NavLink>
 
         {/* Navigation Links */}
