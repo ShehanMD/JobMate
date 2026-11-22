@@ -1,8 +1,15 @@
 .navbar {
   height: 76px;
+<<<<<<< Updated upstream
   background: #ffffff;
   position: sticky;
+=======
+  background: #fff;
+  position: fixed;
+>>>>>>> Stashed changes
   top: 0;
+  left:0;
+  right:0;
   z-index: 1000;
   border-bottom: 5px solid #f1f5f9;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
