@@ -1,6 +1,12 @@
+import {
+  LayoutDashboard,
+  BriefcaseBusiness,
+  Users,
+  UserCheck,
+  LogOut,
+} from "lucide-react";
 
-import { LayoutDashboard, BriefcaseBusiness, Users, UserCheck, LogOut } from "lucide-react";
-import { Link } from "react-router-dom";
+import { NavLink, Link } from "react-router-dom";
 import "./AdminDashboard.css";
 
 function AdminDashboard() {
@@ -13,22 +19,45 @@ function AdminDashboard() {
         </div>
 
         <nav className="admin-sidebar-nav">
-          <Link to="/admin/dashboard" className="admin-sidebar-link active">
+          <NavLink
+            to="/admin/dashboard"
+            className={({ isActive }) =>
+              `admin-sidebar-link ${isActive ? "active" : ""}`
+            }
+          >
             <LayoutDashboard size={19} />
             Dashboard
-          </Link>
-          <Link to="/admin/jobs" className="admin-sidebar-link">
+          </NavLink>
+
+          <NavLink
+            to="/admin/jobs"
+            className={({ isActive }) =>
+              `admin-sidebar-link ${isActive ? "active" : ""}`
+            }
+          >
             <BriefcaseBusiness size={19} />
             Manage Jobs
-          </Link>
-          <Link to="/admin/users" className="admin-sidebar-link">
+          </NavLink>
+
+          <NavLink
+            to="/admin/users"
+            className={({ isActive }) =>
+              `admin-sidebar-link ${isActive ? "active" : ""}`
+            }
+          >
             <Users size={19} />
             Manage Users
-          </Link>
-          <Link to="/admin/workers" className="admin-sidebar-link">
+          </NavLink>
+
+          <NavLink
+            to="/admin/workers"
+            className={({ isActive }) =>
+              `admin-sidebar-link ${isActive ? "active" : ""}`
+            }
+          >
             <UserCheck size={19} />
             Manage Workers
-          </Link>
+          </NavLink>
         </nav>
 
         <Link to="/" className="admin-logout-link">
@@ -43,6 +72,7 @@ function AdminDashboard() {
             <h1>Dashboard Overview</h1>
             <p>Welcome to the Workora Admin Panel</p>
           </div>
+
           <span className="admin-profile">Admin</span>
         </header>
 

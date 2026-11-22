@@ -1,0 +1,177 @@
+
+.create-job-page {
+  padding: 35px;
+  background: #f8fafc;
+  min-height: 100vh;
+}
+
+.create-job-header {
+  margin-bottom: 30px;
+}
+
+.create-job-header h1 {
+  font-size: 28px;
+  color: #0f172a;
+  margin: 0 0 8px;
+}
+
+.create-job-header p {
+  color: #64748b;
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Form Card */
+.create-job-card {
+  background: #ffffff;
+  padding: 30px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+}
+
+/* Form Grid */
+.create-job-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.create-job-field {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.create-job-field.full-width {
+  grid-column: 1 / -1;
+}
+
+.create-job-field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.create-job-field input,
+.create-job-field select,
+.create-job-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #334155;
+  background: #ffffff;
+  outline: none;
+  transition: 0.2s;
+}
+
+.create-job-field input:focus,
+.create-job-field select:focus,
+.create-job-field textarea:focus {
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+}
+
+.create-job-field textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.create-job-field input::placeholder,
+.create-job-field textarea::placeholder {
+  color: #94a3b8;
+}
+
+/* Buttons */
+.create-job-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.create-job-actions button {
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.create-job-cancel {
+  background: #ffffff;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.create-job-cancel:hover {
+  background: #f8fafc;
+}
+
+.create-job-draft {
+  background: #ffffff;
+  color: #059669;
+  border: 1px solid #059669;
+}
+
+.create-job-draft:hover {
+  background: #ecfdf5;
+}
+
+.create-job-publish {
+  background: #059669;
+  color: #ffffff;
+  border: 1px solid #059669;
+}
+
+.create-job-publish:hover {
+  background: #047857;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .create-job-page {
+    padding: 20px;
+  }
+
+  .create-job-card {
+    padding: 20px;
+  }
+
+  .create-job-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .create-job-field.full-width {
+    grid-column: auto;
+  }
+
+  .create-job-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .create-job-actions button {
+    width: 100%;
+  }
+
+.create-job-error {
+  color: #dc2626;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  padding: 12px 15px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-top: 20px;
+}
+
+}
