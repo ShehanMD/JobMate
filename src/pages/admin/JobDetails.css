@@ -1,0 +1,238 @@
+
+.job-details-page {
+  padding: 30px;
+  min-height: 100%;
+  background: #f8fafc;
+  font-family: "DM Sans", "Segoe UI", Arial, sans-serif;
+}
+
+/* Back Button */
+.job-details-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 15px;
+  margin-bottom: 25px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.job-details-back-btn:hover {
+  background: #f1f5f9;
+  color: #059669;
+}
+
+/* Header */
+.job-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 28px;
+  margin-bottom: 22px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+}
+
+.job-details-eyebrow {
+  color: #059669;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.job-details-header h2 {
+  margin: 10px 0;
+  color: #0f172a;
+  font-size: 27px;
+}
+
+.job-details-header p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.job-details-status {
+  padding: 7px 15px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.job-details-status.active {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.job-details-status.inactive {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.job-details-status.draft {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+/* Details Content */
+.job-details-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.job-details-card {
+  padding: 26px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);
+}
+
+.job-details-card h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #0f172a;
+  font-size: 17px;
+}
+
+.job-details-card h3 svg {
+  color: #059669;
+}
+
+/* Information Grid */
+.job-details-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 25px 20px;
+}
+
+.job-details-info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.job-details-info-item > svg {
+  flex-shrink: 0;
+  color: #059669;
+}
+
+.job-details-info-item div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.job-details-info-item span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.job-details-info-item strong {
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* Description and Requirements */
+.job-details-description {
+  margin: 0;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Not Found */
+.job-details-not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 65px 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  text-align: center;
+}
+
+.job-details-not-found svg {
+  color: #94a3b8;
+}
+
+.job-details-not-found h2 {
+  margin: 18px 0 8px;
+  color: #0f172a;
+}
+
+.job-details-not-found p {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.job-details-not-found button {
+  margin-top: 15px;
+  padding: 11px 18px;
+  background: #059669;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.job-details-not-found button:hover {
+  background: #047857;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .job-details-info-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .job-details-page {
+    padding: 18px;
+  }
+
+  .job-details-header {
+    flex-direction: column;
+    padding: 22px;
+  }
+
+  .job-details-header h2 {
+    font-size: 22px;
+  }
+
+  .job-details-card {
+    padding: 20px;
+  }
+
+  .job-details-info-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
