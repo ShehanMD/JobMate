@@ -1,0 +1,141 @@
+
+.login-page {
+  min-height: 85vh;
+  background: #f8fafc;
+  padding: 55px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-container {
+  width: 100%;
+  max-width: 450px;
+}
+
+.login-brand {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.login-brand > span {
+  font-size: 32px;
+  font-weight: 900;
+  color: #111827;
+}
+
+.login-brand > span span {
+  color: #10b981;
+}
+
+.login-brand p {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.login-card {
+  background: white;
+  padding: 38px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  box-shadow: 0 12px 35px rgba(15,23,42,.06);
+}
+
+.login-heading {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.login-heading h1 {
+  font-size: 28px;
+  color: #172b3a;
+  margin-bottom: 8px;
+}
+
+.login-heading p {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.login-card form label {
+  display: block;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 19px 0 8px;
+}
+
+.login-input {
+  height: 49px;
+  border: 1px solid #dbe3eb;
+  border-radius: 9px;
+  padding: 0 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #94a3b8;
+}
+
+.login-input:focus-within {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16,185,129,.1);
+}
+
+.login-input input {
+  border: none;
+  outline: none;
+  width: 100%;
+  height: 100%;
+  font-size: 13px;
+  color: #172b3a;
+  background: transparent;
+}
+
+.login-input button {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+}
+
+.login-options {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.login-options a {
+  color: #059669;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.login-submit {
+  height: 49px;
+  width: 100%;
+  background: #059669;
+  color: white;
+  border: none;
+  border-radius: 9px;
+  margin-top: 23px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: .2s;
+}
+
+.login-submit:hover {
+  background: #047857;
+}
+
+.login-submit:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+@media(max-width: 480px) {
+  .login-card {
+    padding: 25px 19px;
+  }
+}

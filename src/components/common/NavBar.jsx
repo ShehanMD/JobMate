@@ -1,59 +1,139 @@
-import { useState } from "react";
-import { NavLink } from "react-router-dom";
-import { Menu, X, Sun, Moon, ChevronDown, ShieldCheck } from "lucide-react";
+
+import { useState, useRef, useEffect } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+
+import {
+  Menu,
+  X,
+  Sun,
+  Moon,
+  ChevronDown,
+  LayoutDashboard,
+  UserRound,
+  LogOut,
+  ShieldCheck,
+} from "lucide-react";
+
+import { useAuth } from "../../context/AuthContext";
 import "./Navbar.css";
 
 function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  const { currentUser, userData, isAdmin, logout } = useAuth();
+
+  const navigate = useNavigate();
+  const profileRef = useRef(null);
 
   const closeMenu = () => setMenuOpen(false);
+
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setProfileOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClick);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setProfileOpen(false);
+      closeMenu();
+      navigate("/");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
+  const dashboardPath = isAdmin
+    ? "/admin/dashboard"
+    : userData?.role === "worker"
+      ? "/worker-dashboard"
+      : "/dashboard";
+
+  const profilePath = isAdmin ? "/admin/dashboard" : "/profile";
 
   return (
     <nav className="navbar">
       <div className="navbar-container">
-        {/* Logo */}
         <NavLink to="/" className="navbar-logo" onClick={closeMenu}>
-          <div className="logo-symbol">
-            <svg width="28" height="24" viewBox="0 0 28 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M2 2L9.5 22L14 11L18.5 22L26 2" stroke="#059669" strokeWidth="3.8" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M14 11L11.5 5" stroke="#10B981" strokeWidth="3.5" strokeLinecap="round"/>
-            </svg>
-          </div>
-          <span className="logo-text">Workora</span>
+          <span className="logo-text">
+            Job<span className="logo-accent">Mate</span>
+          </span>
         </NavLink>
 
-        {/* Navigation Links */}
         <div className={`navbar-links ${menuOpen ? "active" : ""}`}>
-          <NavLink to="/" end onClick={closeMenu} className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}>
+          <NavLink
+            to="/"
+            end
+            onClick={closeMenu}
+            className={({ isActive }) =>
+              isActive ? "nav-item active" : "nav-item"
+            }
+          >
             Home
           </NavLink>
-          <NavLink to="/jobs" onClick={closeMenu} className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}>
-            Find Jobs <ChevronDown size={14} className="dropdown-chevron" />
+
+          <NavLink
+            to="/jobs"
+            onClick={closeMenu}
+            className={({ isActive }) =>
+              isActive ? "nav-item active" : "nav-item"
+            }
+          >
+            Find Jobs <ChevronDown size={14} />
           </NavLink>
-          <NavLink to="/workers" onClick={closeMenu} className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}>
-            Skilled Workers <ChevronDown size={14} className="dropdown-chevron" />
+
+          <NavLink
+            to="/workers"
+            onClick={closeMenu}
+            className={({ isActive }) =>
+              isActive ? "nav-item active" : "nav-item"
+            }
+          >
+            Skilled Workers <ChevronDown size={14} />
           </NavLink>
-          <NavLink to="/about" onClick={closeMenu} className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}>
+
+          <NavLink to="/about" onClick={closeMenu} className="nav-item">
             About
           </NavLink>
-          <NavLink to="/contact" onClick={closeMenu} className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}>
+
+          <NavLink to="/contact" onClick={closeMenu} className="nav-item">
             Contact
           </NavLink>
 
-          {/* Mobile Sign In */}
-          <div className="mobile-actions">
-            <NavLink to="/login" className="mobile-signin-btn" onClick={closeMenu}>
-              Sign In
-            </NavLink>
-          </div>
+          {!currentUser && (
+            <div className="mobile-actions">
+              <NavLink to="/login" onClick={closeMenu} className="signin-btn">
+                Sign In
+              </NavLink>
+
+              <NavLink to="/register" onClick={closeMenu} className="signup-btn">
+                Sign Up
+              </NavLink>
+            </div>
+          )}
         </div>
 
-        {/* Desktop Right Actions */}
         <div className="navbar-actions">
-          <NavLink to="/admin/login" className="admin-icon-btn" title="Admin Panel">
-  <ShieldCheck size={20} />
-</NavLink>
+          <NavLink
+            to="/admin/login"
+            className="admin-icon-btn"
+            title="Admin Panel"
+            aria-label="Admin Panel"
+          >
+            <ShieldCheck size={20} />
+          </NavLink>
+
           <button
             className="theme-toggle-btn"
             onClick={() => setIsDarkMode(!isDarkMode)}
@@ -62,16 +142,78 @@ function Navbar() {
             {isDarkMode ? <Moon size={20} /> : <Sun size={20} />}
           </button>
 
-          <NavLink to="/login" className="signin-btn">
-            Sign In
-          </NavLink>
+          {!currentUser ? (
+            <>
+              <NavLink to="/login" className="signin-btn">
+                Sign In
+              </NavLink>
+
+              <NavLink to="/register" className="signup-btn">
+                Sign Up
+              </NavLink>
+            </>
+          ) : (
+            <div className="profile-menu" ref={profileRef}>
+              <button
+                className="profile-trigger"
+                onClick={() => setProfileOpen(!profileOpen)}
+              >
+                {currentUser.photoURL ? (
+                  <img
+                    src={currentUser.photoURL}
+                    alt="Profile"
+                    className="navbar-avatar"
+                  />
+                ) : (
+                  <div className="navbar-avatar-placeholder">
+                    <UserRound size={19} />
+                  </div>
+                )}
+
+                <span>
+                  {userData?.name || currentUser.displayName || "My Account"}
+                </span>
+
+                <ChevronDown size={15} />
+              </button>
+
+              {profileOpen && (
+                <div className="profile-dropdown">
+                  <div className="dropdown-user-info">
+                    <strong>{userData?.name || "User"}</strong>
+                    <small>{currentUser.email}</small>
+                  </div>
+
+                  <NavLink
+                    to={dashboardPath}
+                    onClick={() => setProfileOpen(false)}
+                  >
+                    <LayoutDashboard size={17} />
+                    Dashboard
+                  </NavLink>
+
+                  <NavLink
+                    to={profilePath}
+                    onClick={() => setProfileOpen(false)}
+                  >
+                    <UserRound size={17} />
+                    Your Profile
+                  </NavLink>
+
+                  <button onClick={handleLogout}>
+                    <LogOut size={17} />
+                    Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Mobile Menu Button */}
         <button
           className="menu-toggle"
           onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Toggle navigation menu"
+          aria-label="Toggle menu"
         >
           {menuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
