@@ -327,7 +327,7 @@
 }
 
 /* =========================================
-   JOBMATE LINE DRAWING ANIMATION
+   HERO ANIMATION AREA
 ========================================= */
 
 .hero-animation-area {
@@ -364,6 +364,8 @@
   height: auto;
   overflow: visible;
 }
+
+/* Original drawing styles retained for compatibility */
 
 .draw-line {
   fill: none;
@@ -467,7 +469,7 @@
   animation-delay: 4.9s;
 }
 
-/* JobMate logo */
+/* Original logo styles */
 
 .jobmate-logo-draw {
   fill: transparent;
@@ -904,6 +906,97 @@
   left: 8px;
 }
 
+/* =========================================
+   FOOTER
+========================================= */
+
+.footer {
+  padding: 65px 0 22px;
+  background: #102B20;
+  color: #FFFFFF;
+}
+
+.footer-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 45px;
+  padding-bottom: 45px;
+}
+
+.footer-logo {
+  color: #FFFFFF;
+  font-family: "Manrope", sans-serif;
+  font-size: 29px;
+  font-weight: 900;
+  letter-spacing: -1.2px;
+  text-decoration: none;
+}
+
+.footer-logo span {
+  color: #4ADE80;
+}
+
+.footer-brand p {
+  max-width: 300px;
+  margin-top: 15px;
+  color: #B7C9BE;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.footer-links {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 13px;
+}
+
+.footer-links h4 {
+  margin-bottom: 5px;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.footer-links a,
+.footer-links span {
+  color: #B7C9BE;
+  font-size: 13px;
+  text-decoration: none;
+  transition: .2s ease;
+}
+
+.footer-links a:hover {
+  color: #4ADE80;
+}
+
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(255,255,255,.13);
+  color: #A8BDB0;
+  font-size: 12px;
+}
+
+/* =========================================
+   RESPONSIVE - TABLET
+========================================= */
+
+@media (max-width: 1000px) {
+  .hero-title {
+    font-size: clamp(35px, 4.5vw, 47px);
+  }
+
+  .categories-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .footer-content {
+    gap: 25px;
+  }
+}
 
 /* =========================================
    RESPONSIVE - MOBILE
@@ -1147,5 +1240,434 @@
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: .01ms !important;
+  }
+}
+
+/* =========================================
+   PATTAJOBS PROFESSIONAL HANDSHAKE ANIMATION
+========================================= */
+
+
+
+/* =========================================
+   PATTAJOBS PENCIL PATH DRAW ANIMATION
+========================================= */
+
+
+/* Original 3D image - smooth color reveal */
+
+.premium-handshake-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  opacity: 0;
+  filter: saturate(.75) brightness(1.08);
+  animation: premiumImageAppear 4.8s ease-in-out 7.8s forwards;
+}
+
+/* SVG pencil tracing */
+
+.premium-pencil-trace {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  opacity: 1;
+  animation: premiumTraceDisappear 1.8s ease-in-out 10.8s forwards;
+}
+
+/* Caption */
+
+.premium-caption {
+  margin-top: 0;
+  padding: 10px 12px;
+  color: #15803D;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(12px);
+  animation: premiumCaption .9s ease 14.9s forwards;
+}
+
+/* Smooth image color filling */
+
+@keyframes premiumImageAppear {
+  0% {
+    opacity: 0;
+    filter: saturate(.5) brightness(1.15);
+  }
+
+  50% {
+    opacity: .5;
+    filter: saturate(.8) brightness(1.05);
+  }
+
+  100% {
+    opacity: 1;
+    filter: saturate(1) brightness(1);
+  }
+}
+
+/* Smooth pencil outline fade */
+
+@keyframes premiumTraceDisappear {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+/* Caption */
+
+@keyframes premiumCaption {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================================
+   PATTAJOBS SVG SIZE & POSITION FIX
+========================================= */
+
+.premium-scene {
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+
+  width: 100% !important;
+  max-width: 530px !important;
+  min-width: 0 !important;
+
+  height: auto !important;
+  margin: 0 auto !important;
+  padding: 10px !important;
+
+  overflow: hidden !important;
+  isolation: isolate !important;
+  flex-shrink: 1 !important;
+  box-sizing: border-box !important;
+}
+
+.premium-scene > .premium-image-wrap {
+  position: relative !important;
+  display: block !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+
+  height: auto !important;
+  aspect-ratio: 1536 / 1024 !important;
+
+  overflow: hidden !important;
+  margin: 0 auto !important;
+  box-sizing: border-box !important;
+}
+
+.premium-scene .premium-handshake-image {
+  position: absolute !important;
+  inset: 0 !important;
+
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+
+  object-fit: contain !important;
+}
+
+.premium-scene .premium-pencil-trace {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+
+  object-fit: contain !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
+.premium-scene > .premium-caption {
+  position: relative;
+  width: 100%;
+  text-align: center;
+}
+
+/* Mobile */
+
+@media (max-width: 768px) {
+  .premium-scene {
+    max-width: 470px !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .premium-scene {
+    max-width: 380px !important;
+  }
+}
+
+
+/* =========================================
+   PATTAJOBS PREMIUM DECORATIVE EFFECTS
+========================================= */
+
+.premium-image-wrap {
+  isolation: isolate;
+}
+
+/* 1. SOFT GREEN AURA */
+
+.premium-aura {
+  position: absolute;
+  width: 72%;
+  height: 72%;
+  top: 14%;
+  left: 14%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(22, 163, 74, .18) 0%,
+    rgba(22, 163, 74, .07) 45%,
+    transparent 75%
+  );
+  filter: blur(24px);
+  z-index: 0;
+  pointer-events: none;
+  animation: premiumAuraPulse 5s ease-in-out infinite alternate;
+}
+
+/* 2. ORBIT RINGS */
+
+.premium-orbit {
+  position: absolute;
+  border: 1px solid rgba(22, 163, 74, .20);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.premium-orbit-one {
+  width: 86%;
+  height: 68%;
+  top: 16%;
+  left: 7%;
+  animation: premiumOrbitRotate 24s linear infinite;
+}
+
+.premium-orbit-two {
+  width: 96%;
+  height: 78%;
+  top: 11%;
+  left: 2%;
+  border-color: rgba(22, 163, 74, .10);
+  border-style: dashed;
+  animation: premiumOrbitRotateReverse 36s linear infinite;
+}
+
+/* Orbit dots */
+
+.premium-orbit-one::before,
+.premium-orbit-one::after {
+  content: "";
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #16A34A;
+  box-shadow: 0 0 12px rgba(22, 163, 74, .5);
+}
+
+.premium-orbit-one::before {
+  top: 12%;
+  left: 8%;
+}
+
+.premium-orbit-one::after {
+  bottom: 12%;
+  right: 8%;
+}
+
+/* 3. FLOATING PARTICLES */
+
+.premium-particles {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.premium-particles span {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #16A34A;
+  opacity: .45;
+  box-shadow: 0 0 10px rgba(22, 163, 74, .5);
+  animation: premiumParticleFloat 5s ease-in-out infinite;
+}
+
+.premium-particles span:nth-child(1) {
+  top: 20%;
+  left: 9%;
+  animation-delay: 0s;
+}
+
+.premium-particles span:nth-child(2) {
+  top: 35%;
+  right: 8%;
+  animation-delay: .8s;
+}
+
+.premium-particles span:nth-child(3) {
+  top: 65%;
+  left: 5%;
+  animation-delay: 1.5s;
+}
+
+.premium-particles span:nth-child(4) {
+  top: 75%;
+  right: 12%;
+  animation-delay: 2s;
+}
+
+.premium-particles span:nth-child(5) {
+  top: 12%;
+  left: 48%;
+  animation-delay: 2.5s;
+}
+
+.premium-particles span:nth-child(6) {
+  bottom: 12%;
+  left: 35%;
+  animation-delay: 1s;
+}
+
+.premium-particles span:nth-child(7) {
+  top: 48%;
+  left: 2%;
+  animation-delay: 3s;
+}
+
+.premium-particles span:nth-child(8) {
+  top: 52%;
+  right: 3%;
+  animation-delay: 1.8s;
+}
+
+/* 4. GREEN LIGHT SWEEP */
+
+.premium-light-sweep {
+  position: absolute;
+  bottom: 5%;
+  left: -30%;
+  width: 35%;
+  height: 2px;
+  z-index: 4;
+  border-radius: 50%;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #16A34A,
+    #86EFAC,
+    transparent
+  );
+  box-shadow: 0 0 12px rgba(22, 163, 74, .7);
+  opacity: 0;
+  animation: premiumLightSweep 3s ease-in-out 14s infinite;
+}
+
+/* =========================================
+   PREMIUM KEYFRAMES
+========================================= */
+
+@keyframes premiumAuraPulse {
+  from {
+    opacity: .55;
+    transform: scale(.94);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes premiumOrbitRotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes premiumOrbitRotateReverse {
+  from {
+    transform: rotate(360deg);
+  }
+
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes premiumParticleFloat {
+  0%, 100% {
+    transform: translateY(0) scale(.8);
+    opacity: .25;
+  }
+
+  50% {
+    transform: translateY(-15px) scale(1.2);
+    opacity: .75;
+  }
+}
+
+@keyframes premiumLightSweep {
+  0% {
+    left: -30%;
+    opacity: 0;
+  }
+
+  15% {
+    opacity: .9;
+  }
+
+  85% {
+    opacity: .9;
+  }
+
+  100% {
+    left: 110%;
+    opacity: 0;
+  }
+}
+
+/* Accessibility */
+
+@media (prefers-reduced-motion: reduce) {
+  .premium-aura,
+  .premium-orbit,
+  .premium-particles span,
+  .premium-light-sweep {
+    animation: none !important;
   }
 }
