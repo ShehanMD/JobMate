@@ -1,17 +1,9 @@
-
 import { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 
 import {
-  Menu,
-  X,
-  Sun,
-  Moon,
-  ChevronDown,
-  LayoutDashboard,
-  UserRound,
-  LogOut,
-  ShieldCheck,
+  Menu, X, Sun, Moon, ChevronDown,
+  LayoutDashboard, UserRound, LogOut
 } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
@@ -50,7 +42,7 @@ function Navbar() {
       closeMenu();
       navigate("/");
     } catch (error) {
-      console.error("Logout failed:", error);
+      console.error(error);
     }
   };
 
@@ -60,47 +52,35 @@ function Navbar() {
       ? "/worker-dashboard"
       : "/dashboard";
 
-  const profilePath = isAdmin ? "/admin/dashboard" : "/profile";
+  const profilePath = isAdmin
+    ? "/admin/dashboard"
+    : "/profile";
 
   return (
     <nav className="navbar">
       <div className="navbar-container">
+
         <NavLink to="/" className="navbar-logo" onClick={closeMenu}>
           <span className="logo-text">
-            Job<span className="logo-accent">Mate</span>
+            Patta<span className="logo-accent">Jobs</span>
           </span>
         </NavLink>
 
         <div className={`navbar-links ${menuOpen ? "active" : ""}`}>
-          <NavLink
-            to="/"
-            end
-            onClick={closeMenu}
-            className={({ isActive }) =>
-              isActive ? "nav-item active" : "nav-item"
-            }
-          >
+
+          <NavLink to="/" end onClick={closeMenu}
+            className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
             Home
           </NavLink>
 
-          <NavLink
-            to="/jobs"
-            onClick={closeMenu}
-            className={({ isActive }) =>
-              isActive ? "nav-item active" : "nav-item"
-            }
-          >
-            Find Jobs <ChevronDown size={14} />
+          <NavLink to="/jobs" onClick={closeMenu}
+            className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
+            Find Jobs <ChevronDown size={14}/>
           </NavLink>
 
-          <NavLink
-            to="/workers"
-            onClick={closeMenu}
-            className={({ isActive }) =>
-              isActive ? "nav-item active" : "nav-item"
-            }
-          >
-            Skilled Workers <ChevronDown size={14} />
+          <NavLink to="/workers" onClick={closeMenu}
+            className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
+            Skilled Workers <ChevronDown size={14}/>
           </NavLink>
 
           <NavLink to="/about" onClick={closeMenu} className="nav-item">
@@ -116,7 +96,6 @@ function Navbar() {
               <NavLink to="/login" onClick={closeMenu} className="signin-btn">
                 Sign In
               </NavLink>
-
               <NavLink to="/register" onClick={closeMenu} className="signup-btn">
                 Sign Up
               </NavLink>
@@ -125,21 +104,13 @@ function Navbar() {
         </div>
 
         <div className="navbar-actions">
-          <NavLink
-            to="/admin/login"
-            className="admin-icon-btn"
-            title="Admin Panel"
-            aria-label="Admin Panel"
-          >
-            <ShieldCheck size={20} />
-          </NavLink>
 
           <button
             className="theme-toggle-btn"
             onClick={() => setIsDarkMode(!isDarkMode)}
             aria-label="Toggle theme"
           >
-            {isDarkMode ? <Moon size={20} /> : <Sun size={20} />}
+            {isDarkMode ? <Moon size={20}/> : <Sun size={20}/>}
           </button>
 
           {!currentUser ? (
@@ -154,6 +125,7 @@ function Navbar() {
             </>
           ) : (
             <div className="profile-menu" ref={profileRef}>
+
               <button
                 className="profile-trigger"
                 onClick={() => setProfileOpen(!profileOpen)}
@@ -166,48 +138,45 @@ function Navbar() {
                   />
                 ) : (
                   <div className="navbar-avatar-placeholder">
-                    <UserRound size={19} />
+                    <UserRound size={19}/>
                   </div>
                 )}
 
-                <span>
-                  {userData?.name || currentUser.displayName || "My Account"}
-                </span>
+                <span>{userData?.name || currentUser.displayName || "My Account"}</span>
 
-                <ChevronDown size={15} />
+                <ChevronDown size={15}/>
               </button>
 
               {profileOpen && (
                 <div className="profile-dropdown">
+
                   <div className="dropdown-user-info">
                     <strong>{userData?.name || "User"}</strong>
                     <small>{currentUser.email}</small>
                   </div>
 
-                  <NavLink
-                    to={dashboardPath}
-                    onClick={() => setProfileOpen(false)}
-                  >
-                    <LayoutDashboard size={17} />
+                  <NavLink to={dashboardPath}
+                    onClick={() => setProfileOpen(false)}>
+                    <LayoutDashboard size={17}/>
                     Dashboard
                   </NavLink>
 
-                  <NavLink
-                    to={profilePath}
-                    onClick={() => setProfileOpen(false)}
-                  >
-                    <UserRound size={17} />
+                  <NavLink to={profilePath}
+                    onClick={() => setProfileOpen(false)}>
+                    <UserRound size={17}/>
                     Your Profile
                   </NavLink>
 
                   <button onClick={handleLogout}>
-                    <LogOut size={17} />
+                    <LogOut size={17}/>
                     Sign Out
                   </button>
+
                 </div>
               )}
             </div>
           )}
+
         </div>
 
         <button
@@ -215,8 +184,9 @@ function Navbar() {
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Toggle menu"
         >
-          {menuOpen ? <X size={24} /> : <Menu size={24} />}
+          {menuOpen ? <X size={24}/> : <Menu size={24}/>}
         </button>
+
       </div>
     </nav>
   );
