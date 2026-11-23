@@ -63,186 +63,61 @@ function TypingHeading() {
   );
 }
 
-/* =========================================
-   JOBMATE SVG LINE DRAWING ANIMATION
-========================================= */
+
 
 function JobMateLineAnimation() {
   return (
-    <div className="jobmate-line-scene">
-      <svg
-        className="jobmate-drawing"
-        viewBox="0 0 560 390"
-        xmlns="http://www.w3.org/2000/svg"
-        role="img"
-        aria-label="Employer and skilled worker connecting through JobMate"
-      >
-        <defs>
-          <linearGradient id="lineGreen" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#86EFAC" />
-            <stop offset="100%" stopColor="#15803D" />
-          </linearGradient>
-        </defs>
+    <div className="premium-scene">
+      <div className="premium-glow"></div>
 
-        {/* Decorative circles */}
-        <circle
-          className="draw-decoration"
-          cx="280"
-          cy="145"
-          r="125"
+      <div className="premium-image-wrap">
+
+        {/* Soft green aura */}
+        <div className="premium-aura"></div>
+
+        {/* Orbit rings */}
+        <div className="premium-orbit premium-orbit-one"></div>
+        <div className="premium-orbit premium-orbit-two"></div>
+
+        {/* Floating particles */}
+        <div className="premium-particles">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+
+        {/* Original image */}
+        <img
+          src="/pattajobs-handshake.png"
+          alt="PattaJobs connecting a business owner with a worker"
+          className="premium-handshake-image"
         />
 
-        <circle
-          className="draw-decoration draw-decoration-two"
-          cx="280"
-          cy="145"
-          r="155"
+        {/* Pencil tracing */}
+        <img
+          src="/pattajobs-pencil-trace-11s.svg"
+          alt=""
+          aria-hidden="true"
+          className="premium-pencil-trace"
         />
 
-        {/* BOSS HEAD */}
-        <circle
-          className="draw-line boss-line line-1"
-          cx="155"
-          cy="88"
-          r="31"
-        />
+        {/* Green light sweep */}
+        <div className="premium-light-sweep"></div>
 
-        {/* BOSS HAIR */}
-        <path
-          className="draw-line boss-line line-2"
-          d="M125 83 Q128 48 157 53 Q183 53 186 82"
-        />
+      </div>
 
-        {/* BOSS NECK */}
-        <path
-          className="draw-line boss-line line-3"
-          d="M143 117 L143 137 M168 117 L168 137"
-        />
-
-        {/* BOSS BODY */}
-        <path
-          className="draw-line boss-line line-4"
-          d="M143 132 L112 146 Q98 153 94 177 L82 237
-             M168 132 L198 146 Q212 153 216 177 L228 237"
-        />
-
-        {/* BOSS SUIT */}
-        <path
-          className="draw-line boss-line line-5"
-          d="M112 146 L155 176 L198 146
-             M155 176 L155 256
-             M155 176 L137 198 L124 180
-             M155 176 L174 198 L187 180"
-        />
-
-        {/* BOSS ARMS */}
-        <path
-          className="draw-line boss-line line-6"
-          d="M94 177 L78 219 L106 240
-             M216 177 L232 219 L204 240"
-        />
-
-        {/* WORKER HEAD */}
-        <circle
-          className="draw-line worker-line line-7"
-          cx="405"
-          cy="88"
-          r="31"
-        />
-
-        {/* WORKER HELMET */}
-        <path
-          className="draw-line worker-line line-8"
-          d="M370 82 Q373 48 405 48 Q437 48 440 82
-             M365 83 L445 83
-             M405 48 L405 37"
-        />
-
-        {/* WORKER NECK */}
-        <path
-          className="draw-line worker-line line-9"
-          d="M393 117 L393 137 M417 117 L417 137"
-        />
-
-        {/* WORKER BODY */}
-        <path
-          className="draw-line worker-line line-10"
-          d="M393 132 L361 146 Q347 153 343 177 L331 237
-             M417 132 L449 146 Q463 153 467 177 L479 237"
-        />
-
-        {/* WORKER SHIRT */}
-        <path
-          className="draw-line worker-line line-11"
-          d="M361 146 L405 176 L449 146
-             M405 176 L405 256
-             M386 163 L405 181 L424 163"
-        />
-
-        {/* WORKER ARMS */}
-        <path
-          className="draw-line worker-line line-12"
-          d="M343 177 L327 219 L355 240
-             M467 177 L483 219 L455 240"
-        />
-
-        {/* CONNECTION LINE */}
-        <path
-          className="draw-line connection-line line-13"
-          d="M228 211 C260 175 300 175 331 211"
-        />
-
-        <circle
-          className="connection-dot dot-one"
-          cx="228"
-          cy="211"
-          r="5"
-        />
-
-        <circle
-          className="connection-dot dot-two"
-          cx="331"
-          cy="211"
-          r="5"
-        />
-
-        {/* CONNECTION SYMBOL */}
-        <path
-          className="draw-line connection-line line-14"
-          d="M267 191 L280 180 L293 191
-             M280 180 L280 210"
-        />
-
-        {/* GROUND LINE */}
-        <path
-          className="draw-line ground-line line-15"
-          d="M70 263 Q280 279 490 263"
-        />
-
-        {/* JOBMATE LOGO */}
-        <text
-          className="jobmate-logo-draw"
-          x="280"
-          y="330"
-          textAnchor="middle"
-        >
-          JobMate
-        </text>
-
-        {/* LOGO UNDERLINE */}
-        <path
-          className="draw-line logo-underline line-16"
-          d="M205 348 Q280 365 355 348"
-        />
-      </svg>
-
-      <div className="animation-caption">
-        <span className="caption-dot" />
+      <div className="premium-caption">
         Connecting People. Creating Opportunities.
       </div>
     </div>
   );
 }
+
 
 /* =========================================
    WORKER CATEGORIES
@@ -579,7 +454,52 @@ function Home() {
         </div>
       </section>
 
-      
+      {/* FOOTER */}
+      <footer className="footer">
+        <div className="section-container">
+
+          <div className="footer-content">
+
+            <div className="footer-brand">
+              <a href="/" className="footer-logo">
+                Job<span>Mate</span>
+              </a>
+
+              <p>
+                Connecting opportunities with people. Your trusted place
+                to discover jobs and skilled workers.
+              </p>
+            </div>
+
+            <div className="footer-links">
+              <h4>Explore</h4>
+              <a href="/jobs">General Jobs</a>
+              <a href="/workers">Skilled Workers</a>
+            </div>
+
+            <div className="footer-links">
+              <h4>Get Started</h4>
+              <a href="/register">Join as a Worker</a>
+              <a href="/login">Login</a>
+            </div>
+
+            <div className="footer-links">
+              <h4>Why JobMate?</h4>
+              <span>Easy to Explore</span>
+              <span>Simple Connections</span>
+            </div>
+
+          </div>
+
+          <div className="footer-bottom">
+            <p>
+              © {new Date().getFullYear()} JobMate. All rights reserved.
+            </p>
+            <p>Connecting. Working. Growing.</p>
+          </div>
+
+        </div>
+      </footer>
 
     </main>
   );
