@@ -17,6 +17,9 @@ import Navbar from "./components/common/NavBar";
 import Footer from "./components/common/Footer";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 
+// ✅ Chatbot Import (Added)
+import Chatbot from "./components/common/Chatbot";
+
 import { AuthProvider } from "./context/AuthContext";
 
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -144,6 +147,9 @@ function AppContent() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
+
+      {/* ✅ Chatbot Added - Hidden on Admin Pages */}
+      {!isAdminPage && <Chatbot />}
 
       {!isAdminPage && <Footer />}
     </div>
