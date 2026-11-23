@@ -2,7 +2,7 @@
 .navbar {
   height: 76px;
   background: #fff;
-  position: sticky;
+  position: fixed;
   top: 0;
   z-index: 1000;
   border-bottom: 4px solid #f1f5f9;
