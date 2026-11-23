@@ -9,7 +9,32 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import "./Navbar.css";
 
+const findJobsMenu = [
+  { label: "All Job Vacancies", path: "/jobs" },
+  { label: "Internship Opportunities", path: "/jobs?type=internship" },
+  { label: "Permanent", path: "/jobs?type=permanent" },
+  { label: "Temporary", path: "/jobs?type=temporary" },
+  { label: "On-contract", path: "/jobs?type=on-contract" },
+];
+
+const skilledWorkersMenu = [
+  { label: "Electricians", path: "/workers?category=electricians" },
+  { label: "Plumbers", path: "/workers?category=plumbers" },
+  { label: "Carpenters", path: "/workers?category=carpenters" },
+  { label: "Painters", path: "/workers?category=painters" },
+  { label: "Technicians", path: "/workers?category=technicians" },
+  { label: "Construction Workers", path: "/workers?category=construction-workers" },
+  { label: "Others", path: "/workers?category=others" },
+];
+
+
 function Navbar() {
+  const [openDropdown, setOpenDropdown] = useState(null);
+
+const toggleDropdown = (menuName) => {
+  setOpenDropdown(openDropdown === menuName ? null : menuName);
+};
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -73,15 +98,72 @@ function Navbar() {
             Home
           </NavLink>
 
-          <NavLink to="/jobs" onClick={closeMenu}
-            className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
-            Find Jobs <ChevronDown size={14}/>
-          </NavLink>
+          <div className={`nav-dropdown ${openDropdown === "jobs" ? "open" : ""}`}>
+            <NavLink
+              to="/jobs"
+              onClick={(e) => {
+                if (window.innerWidth <= 900) {
+                  e.preventDefault(); // Mobile එකේදී කෙලින්ම page එකට යන එක නවත්තනවා
+                  toggleDropdown("jobs");
+                } else {
+                  closeMenu();
+                }
+              }}
+              className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}
+            >
+              Find Jobs <ChevronDown size={14} className="dropdown-arrow" />
+            </NavLink>
 
-          <NavLink to="/workers" onClick={closeMenu}
-            className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
-            Skilled Workers <ChevronDown size={14}/>
-          </NavLink>
+            <div className="nav-dropdown-menu">
+              {findJobsMenu.map((item, index) => (
+                <NavLink
+                  key={index}
+                  to={item.path}
+                  onClick={() => {
+                    closeMenu();
+                    setOpenDropdown(null);
+                  }}
+                  className="dropdown-item"
+                >
+                  {item.label}
+                </NavLink>
+              ))}
+            </div>
+          </div>
+          
+
+          <div className={`nav-dropdown ${openDropdown === "workers" ? "open" : ""}`}>
+            <NavLink
+              to="/workers"
+              onClick={(e) => {
+                if (window.innerWidth <= 900) {
+                  e.preventDefault(); // Mobile එකේදී කෙලින්ම page එකට යන එක නවත්තනවා
+                  toggleDropdown("workers");
+                } else {
+                  closeMenu();
+                }
+              }}
+              className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}
+            >
+              Skilled Workers <ChevronDown size={14} className="dropdown-arrow" />
+            </NavLink>
+
+            <div className="nav-dropdown-menu">
+              {skilledWorkersMenu.map((item, index) => (
+                <NavLink
+                  key={index}
+                  to={item.path}
+                  onClick={() => {
+                    closeMenu();
+                    setOpenDropdown(null);
+                  }}
+                  className="dropdown-item"
+                >
+                  {item.label}
+                </NavLink>
+              ))}
+            </div>
+          </div>
 
           <NavLink to="/about" onClick={closeMenu} className="nav-item">
             About

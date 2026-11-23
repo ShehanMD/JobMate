@@ -95,3 +95,6 @@ body {
   color: #0f172a;
   min-height: 100vh;
 }
+#root {
+  padding-top: 80px !important;
+}
