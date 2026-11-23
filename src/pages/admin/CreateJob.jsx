@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./CreateJob.css";
+import DistrictDropdown from "../../components/common/DistrictDropdown";
 
 function CreateJob() {
   const navigate = useNavigate();
@@ -28,22 +29,27 @@ function CreateJob() {
       ...previousData,
       [name]: value,
     }));
+
+    if (name === "location") {
+      setMessage("");
+    }
   };
 
   // Save job
   const handleSaveJob = (status) => {
-    // Required field validation for publishing
     if (status === "Active") {
       if (
         !formData.title.trim() ||
         !formData.company.trim() ||
-        !formData.location.trim() ||
+        !formData.location ||
         !formData.type ||
         !formData.salary.trim() ||
         !formData.category ||
         !formData.description.trim()
       ) {
-        setMessage("Please fill in all required fields before publishing.");
+        setMessage(
+          "Please fill in all required fields before publishing."
+        );
         return;
       }
     }
@@ -73,7 +79,6 @@ function CreateJob() {
       alert("Job published successfully!");
     }
 
-    // Go back to Manage Jobs
     navigate("/admin/jobs");
   };
 
@@ -90,10 +95,12 @@ function CreateJob() {
       </div>
 
       <div className="create-job-card">
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          handleSaveJob("Active");
-        }}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSaveJob("Active");
+          }}
+        >
           <div className="create-job-grid">
             <div className="create-job-field">
               <label>Job Title *</label>
@@ -117,14 +124,15 @@ function CreateJob() {
               />
             </div>
 
+            {/* District Dropdown */}
             <div className="create-job-field">
               <label>Location *</label>
-              <input
-                type="text"
+              <DistrictDropdown
                 name="location"
                 value={formData.location}
                 onChange={handleChange}
-                placeholder="Enter job location"
+                required
+                placeholder="Select District"
               />
             </div>
 
