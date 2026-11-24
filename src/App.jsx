@@ -24,6 +24,9 @@ import Footer from "./components/common/Footer";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import JobsPage from "./pages/JobsPage";
 
+// ✅ Chatbot Import (Added)
+import Chatbot from "./components/common/Chatbot";
+
 import { AuthProvider } from "./context/AuthContext";
 import { PublicJobsProvider } from "./context/PublicJobsContext";
 
@@ -189,6 +192,9 @@ function AppContent() {
           />
         </Routes>
       </main>
+
+      {/* ✅ Chatbot Added - Hidden on Admin Pages */}
+      {!isAdminPage && <Chatbot />}
 
       {!isAdminPage && <Footer />}
     </div>

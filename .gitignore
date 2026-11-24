@@ -32,3 +32,5 @@ private/
 *.njsproj
 *.sln
 *.sw?
+
+server/.env
