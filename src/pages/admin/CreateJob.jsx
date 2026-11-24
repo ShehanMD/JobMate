@@ -1,8 +1,14 @@
 
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import "./CreateJob.css";
 import DistrictDropdown from "../../components/common/DistrictDropdown";
+
+import {
+  createJob,
+  getTodayColomboDate,
+} from "../../services/jobService";
 
 function CreateJob() {
   const navigate = useNavigate();
@@ -20,8 +26,8 @@ function CreateJob() {
   });
 
   const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -30,13 +36,12 @@ function CreateJob() {
       [name]: value,
     }));
 
-    if (name === "location") {
-      setMessage("");
-    }
+    setMessage("");
   };
 
-  // Save job
-  const handleSaveJob = (status) => {
+  const handleSaveJob = async (status) => {
+    if (saving) return;
+
     if (status === "Active") {
       if (
         !formData.title.trim() ||
@@ -54,35 +59,37 @@ function CreateJob() {
       }
     }
 
-    // Get previously saved jobs
-    const existingJobs = JSON.parse(
-      localStorage.getItem("jobmate_jobs") || "[]"
-    );
-
-    // Create new job object
-    const newJob = {
-      id: Date.now(),
-      ...formData,
-      status,
-      createdAt: new Date().toISOString(),
-    };
-
-    // Save job to local storage
-    localStorage.setItem(
-      "jobmate_jobs",
-      JSON.stringify([...existingJobs, newJob])
-    );
-
-    if (status === "Draft") {
-      alert("Job saved as draft successfully!");
-    } else {
-      alert("Job published successfully!");
+    if (
+      formData.deadline &&
+      formData.deadline < getTodayColomboDate()
+    ) {
+      setMessage("Please select a valid future deadline.");
+      return;
     }
 
-    navigate("/admin/jobs");
+    try {
+      setSaving(true);
+      setMessage("");
+
+      await createJob(formData, status);
+
+      alert(
+        status === "Draft"
+          ? "Job saved as draft successfully!"
+          : "Job published successfully!"
+      );
+
+      navigate("/admin/jobs");
+    } catch (error) {
+      console.error("Unable to save job:", error);
+      setMessage(
+        "Unable to save the job. Please try again."
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
-  // Cancel
   const handleCancel = () => {
     navigate("/admin/jobs");
   };
@@ -91,7 +98,7 @@ function CreateJob() {
     <div className="create-job-page">
       <div className="create-job-header">
         <h1>Create New Job</h1>
-        <p>Add a new job vacancy to JobMate.</p>
+        <p>Add a new job vacancy to PattaJobs.</p>
       </div>
 
       <div className="create-job-card">
@@ -102,6 +109,7 @@ function CreateJob() {
           }}
         >
           <div className="create-job-grid">
+
             <div className="create-job-field">
               <label>Job Title *</label>
               <input
@@ -124,7 +132,6 @@ function CreateJob() {
               />
             </div>
 
-            {/* District Dropdown */}
             <div className="create-job-field">
               <label>Location *</label>
               <DistrictDropdown
@@ -209,9 +216,11 @@ function CreateJob() {
                 type="date"
                 name="deadline"
                 value={formData.deadline}
+                min={getTodayColomboDate()}
                 onChange={handleChange}
               />
             </div>
+
           </div>
 
           {message && (
@@ -223,6 +232,7 @@ function CreateJob() {
               type="button"
               className="create-job-cancel"
               onClick={handleCancel}
+              disabled={saving}
             >
               Cancel
             </button>
@@ -231,15 +241,17 @@ function CreateJob() {
               type="button"
               className="create-job-draft"
               onClick={() => handleSaveJob("Draft")}
+              disabled={saving}
             >
-              Save as Draft
+              {saving ? "Saving..." : "Save as Draft"}
             </button>
 
             <button
               type="submit"
               className="create-job-publish"
+              disabled={saving}
             >
-              Publish Job
+              {saving ? "Publishing..." : "Publish Job"}
             </button>
           </div>
         </form>

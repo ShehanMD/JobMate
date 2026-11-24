@@ -7,6 +7,10 @@ import {
   useLocation,
 } from "react-router-dom";
 
+import React, { useState, useEffect } from "react";
+import Preloader from "./components/Preloader";
+
+
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -18,8 +22,10 @@ import Profile from "./pages/Profile";
 import Navbar from "./components/common/NavBar";
 import Footer from "./components/common/Footer";
 import ProtectedRoute from "./components/common/ProtectedRoute";
+import JobsPage from "./pages/JobsPage";
 
 import { AuthProvider } from "./context/AuthContext";
+import { PublicJobsProvider } from "./context/PublicJobsContext";
 
 // Admin Pages
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -56,7 +62,7 @@ function AppContent() {
 
           <Route
             path="/jobs"
-            element={<h1>Find Jobs Page</h1>}
+            element={<JobsPage />}
           />
 
           <Route
@@ -190,12 +196,34 @@ function AppContent() {
 }
 
 function App() {
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Demo: Keep preloader for 2.2 seconds
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2200);
+
+    return () => clearTimeout(timer);
+  }, []);
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </BrowserRouter>
+    <>
+      <Preloader isLoading={isLoading} />
+      
+
+      <div className="website-content">
+        <BrowserRouter>
+        <PublicJobsProvider>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </PublicJobsProvider>
+      </BrowserRouter>
+        
+      </div>
+
+      
+    </>
   );
 }
 
