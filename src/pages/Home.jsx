@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Search,
   BriefcaseBusiness,
@@ -18,6 +19,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import "./Home.css";
+
 
 function TypingHeading() {
   const words = [
@@ -188,16 +190,16 @@ function Home() {
             </p>
 
             <div className="hero-buttons">
-              <a href="/jobs" className="btn-primary">
+              <Link to="/jobs" className="btn-primary" >
                 <Search size={18} />
                 Browse Jobs
                 <ArrowRight size={17} />
-              </a>
+              </Link>
 
-              <a href="/workers" className="btn-secondary">
+              <Link to="/workers" className="btn-secondary">
                 <Users size={18} />
                 Find Skilled Workers
-              </a>
+              </Link>
             </div>
 
             <div className="hero-trust">
@@ -250,9 +252,9 @@ function Home() {
                 and career goals.
               </p>
 
-              <a href="/jobs" className="service-link">
+              <Link to="/jobs" className="service-link">
                 Browse Jobs <ArrowRight size={17} />
-              </a>
+              </Link>
             </article>
 
             <article className="service-card">
@@ -267,9 +269,9 @@ function Home() {
                 right person for repair, maintenance, and other services.
               </p>
 
-              <a href="/workers" className="service-link">
+              <Link to="/workers" className="service-link">
                 Find Workers <ArrowRight size={17} />
-              </a>
+              </Link>
             </article>
 
           </div>
@@ -300,9 +302,9 @@ function Home() {
               Please check back later.
             </p>
 
-            <a href="/jobs" className="btn-primary">
+            <Link to="/jobs" className="btn-primary">
               Explore Jobs <ArrowRight size={17} />
-            </a>
+            </Link>
           </div>
 
         </div>
@@ -325,8 +327,8 @@ function Home() {
               const CategoryIcon = category.icon;
 
               return (
-                <a
-                  href="/workers"
+                <Link
+                  to="/workers"
                   className="category-card"
                   key={category.title}
                 >
@@ -340,15 +342,15 @@ function Home() {
                   </div>
 
                   <ArrowRight className="category-arrow" size={19} />
-                </a>
+                </Link>
               );
             })}
           </div>
 
           <div className="categories-bottom">
-            <a href="/workers" className="text-link">
+            <Link to="/workers" className="text-link">
               Explore All Skilled Workers <ArrowRight size={17} />
-            </a>
+            </Link>
           </div>
 
         </div>
@@ -429,11 +431,11 @@ function Home() {
                 and make it easier for people to find your services.
               </p>
 
-              <a href="/register" className="btn-primary">
+              <Link to="/register" className="btn-primary">
                 <UserPlus size={18} />
                 Join as a Worker
                 <ArrowRight size={17} />
-              </a>
+              </Link>
             </div>
 
             <div className="join-visual">
@@ -461,9 +463,9 @@ function Home() {
           <div className="footer-content">
 
             <div className="footer-brand">
-              <a href="/" className="footer-logo">
+              <Link to="/" className="footer-logo">
                 Job<span>Mate</span>
-              </a>
+              </Link>
 
               <p>
                 Connecting opportunities with people. Your trusted place
@@ -473,14 +475,14 @@ function Home() {
 
             <div className="footer-links">
               <h4>Explore</h4>
-              <a href="/jobs">General Jobs</a>
-              <a href="/workers">Skilled Workers</a>
+              <Link to="/jobs">General Jobs</Link>
+              <Link to="/workers">Skilled Workers</Link>
             </div>
 
             <div className="footer-links">
               <h4>Get Started</h4>
-              <a href="/register">Join as a Worker</a>
-              <a href="/login">Login</a>
+              <Link to="/register">Join as a Worker</Link>
+              <Link to="/login">Login</Link>
             </div>
 
             <div className="footer-links">
