@@ -456,53 +456,7 @@ function Home() {
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="footer">
-        <div className="section-container">
-
-          <div className="footer-content">
-
-            <div className="footer-brand">
-              <Link to="/" className="footer-logo">
-                Job<span>Mate</span>
-              </Link>
-
-              <p>
-                Connecting opportunities with people. Your trusted place
-                to discover jobs and skilled workers.
-              </p>
-            </div>
-
-            <div className="footer-links">
-              <h4>Explore</h4>
-              <Link to="/jobs">General Jobs</Link>
-              <Link to="/workers">Skilled Workers</Link>
-            </div>
-
-            <div className="footer-links">
-              <h4>Get Started</h4>
-              <Link to="/register">Join as a Worker</Link>
-              <Link to="/login">Login</Link>
-            </div>
-
-            <div className="footer-links">
-              <h4>Why JobMate?</h4>
-              <span>Easy to Explore</span>
-              <span>Simple Connections</span>
-            </div>
-
-          </div>
-
-          <div className="footer-bottom">
-            <p>
-              © {new Date().getFullYear()} JobMate. All rights reserved.
-            </p>
-            <p>Connecting. Working. Growing.</p>
-          </div>
-
-        </div>
-      </footer>
-
+    
     </main>
   );
 }
