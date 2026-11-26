@@ -92,10 +92,20 @@ function AdminLayout() {
         }`}
       >
         <div className="admin-sidebar-brand">
-          <div className="admin-brand-icon">P</div>
-          <div>
-            <h2>PattaJobs</h2>
-            <span>Admin Panel</span>
+          <div className="admin-sidebar-brand">
+            <div className="admin-brand-text" onClick={() => navigate("/")}>
+              <h2 className="admin-brand-title">
+                Patta<span className="admin-brand-accent">Jobs</span>
+              </h2>
+              <span className="admin-brand-subtitle">Admin Panel</span>
+            </div>
+
+            <button
+              className="admin-mobile-close"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <X size={21} />
+            </button>
           </div>
 
           <button

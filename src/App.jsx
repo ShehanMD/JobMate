@@ -68,7 +68,7 @@ function AppContent() {
     >
       {!isAdminPage && <Navbar />}
 
-      <main style={{ flex: 1 }}>
+      <main style={{ flex: 1, paddingTop: isAdminPage ? "0px" : "80px" }}>
         <Routes>
           {/* Public Pages */}
           <Route path="/" element={<Home />} />

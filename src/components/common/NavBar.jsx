@@ -103,7 +103,7 @@ const toggleDropdown = (menuName) => {
               to="/jobs"
               onClick={(e) => {
                 if (window.innerWidth <= 900) {
-                  e.preventDefault(); // Mobile එකේදී කෙලින්ම page එකට යන එක නවත්තනවා
+                  e.preventDefault(); 
                   toggleDropdown("jobs");
                 } else {
                   closeMenu();
@@ -137,7 +137,7 @@ const toggleDropdown = (menuName) => {
               to="/workers"
               onClick={(e) => {
                 if (window.innerWidth <= 900) {
-                  e.preventDefault(); // Mobile එකේදී කෙලින්ම page එකට යන එක නවත්තනවා
+                  e.preventDefault(); 
                   toggleDropdown("workers");
                 } else {
                   closeMenu();

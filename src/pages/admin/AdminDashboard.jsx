@@ -541,7 +541,7 @@ function AdminDashboard() {
             <h1>Dashboard Overview</h1>
 
             <p>
-              Welcome to the Workora Admin Panel
+              Welcome to the PattaJobs Admin Panel
             </p>
           </div>
 
