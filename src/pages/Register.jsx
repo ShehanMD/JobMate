@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -40,7 +41,7 @@ function Register() {
 
 
   // ======================================
-  // VALIDATE EMAIL REGISTRATION DETAILS
+  // VALIDATE REGISTRATION DETAILS
   // ======================================
 
   const validateProfileDetails = () => {
@@ -96,12 +97,20 @@ function Register() {
       case "auth/account-exists-with-different-credential":
         return "An account already exists with another sign-in method.";
 
-      case "permission-denied":
-        return "Your profile could not be saved. Please contact the administrator.";
-
       default:
         return "Unable to create account. Please try again.";
     }
+  };
+
+
+  // ======================================
+  // GET DASHBOARD PATH
+  // ======================================
+
+  const getDashboardPath = () => {
+    return role === "worker"
+      ? "/worker-dashboard"
+      : "/dashboard";
   };
 
 
@@ -140,13 +149,9 @@ function Register() {
         location
       );
 
-      navigate("/login", {
+      // Account is already Active and logged in.
+      navigate(getDashboardPath(), {
         replace: true,
-
-        state: {
-          message:
-            "Registration successful! Your account is waiting for administrator approval.",
-        },
       });
 
     } catch (err) {
@@ -172,20 +177,11 @@ function Register() {
     try {
       setLoading(true);
 
-      // Social registration uses the provider's
-      // name, email and profile photo.
-      //
-      // Phone and district can be added later.
-
       await socialRegister(provider, role);
 
-      navigate("/login", {
+      // Go directly to the selected account dashboard.
+      navigate(getDashboardPath(), {
         replace: true,
-
-        state: {
-          message:
-            "Registration successful! Please wait for administrator approval.",
-        },
       });
 
     } catch (err) {
@@ -466,12 +462,10 @@ function Register() {
               className="register-submit"
               disabled={loading}
             >
-
               {loading
                 ? "Creating Account..."
                 : "Create Account"
               }
-
             </button>
 
           </form>
@@ -485,9 +479,6 @@ function Register() {
 
 
           {/* SOCIAL REGISTRATION */}
-
-          {/* These buttons are outside the form.
-              Required fields will not block social registration. */}
 
           <div className="social-buttons">
 

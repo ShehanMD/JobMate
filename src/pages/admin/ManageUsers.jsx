@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 
 import {
@@ -14,7 +15,6 @@ import {
   Clock,
   LogIn,
   UserRound,
-  Check,
 } from "lucide-react";
 
 import {
@@ -47,7 +47,7 @@ const initialEditForm = {
   email: "",
   phone: "",
   location: "",
-  status: "Pending",
+  status: "Active",
 };
 
 
@@ -109,13 +109,16 @@ const displayValue = (value) => {
 };
 
 
-// Profiles without a status are treated as Pending.
+// All accounts are considered Active unless Admin has
+// explicitly changed their status to Inactive.
 const getUserStatus = (user) => {
-  return user.status || "Pending";
+  return user.status === "Inactive"
+    ? "Inactive"
+    : "Active";
 };
 
 
-// Calculate unique active days from activity records.
+// Calculate unique active days.
 const getActiveDays = (activities) => {
   const activeDates = new Set();
 
@@ -138,7 +141,7 @@ const getActiveDays = (activities) => {
 
 
 // ======================================
-// MANAGE USERS COMPONENT
+// MANAGE USERS
 // ======================================
 
 function ManageUsers() {
@@ -152,6 +155,7 @@ function ManageUsers() {
   const [loadingUsers, setLoadingUsers] = useState(true);
 
   const [usersError, setUsersError] = useState("");
+
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -177,12 +181,9 @@ function ManageUsers() {
 
   const [saving, setSaving] = useState(false);
 
-  const [approvingUserId, setApprovingUserId] = useState(null);
-
   const [deletingUserId, setDeletingUserId] = useState(null);
 
 
-  // Get selected user from current Firestore data.
   const selectedUser =
     users.find((user) => user.id === selectedUserId) || null;
 
@@ -195,7 +196,6 @@ function ManageUsers() {
 
     const usersRef = collection(db, "users");
 
-    // Only Job Seekers.
     const usersQuery = query(
       usersRef,
       where("role", "==", "user")
@@ -213,7 +213,7 @@ function ManageUsers() {
         }));
 
 
-        // Sort newest registrations first.
+        // Newest registrations first.
         usersList.sort((a, b) => {
 
           const dateA =
@@ -259,7 +259,7 @@ function ManageUsers() {
 
 
   // ======================================
-  // REAL-TIME SELECTED USER ACTIVITY
+  // REAL-TIME USER ACTIVITY
   // ======================================
 
   useEffect(() => {
@@ -339,7 +339,7 @@ function ManageUsers() {
 
 
   // ======================================
-  // FILTER JOB SEEKERS
+  // FILTER USERS
   // ======================================
 
   const filteredUsers = users.filter((user) => {
@@ -383,11 +383,6 @@ function ManageUsers() {
   const totalUsers = users.length;
 
 
-  const pendingUsers = users.filter(
-    (user) => getUserStatus(user) === "Pending"
-  ).length;
-
-
   const activeUsers = users.filter(
     (user) => getUserStatus(user) === "Active"
   ).length;
@@ -399,7 +394,7 @@ function ManageUsers() {
 
 
   // ======================================
-  // FILTER RESET / MODALS
+  // RESET FILTERS
   // ======================================
 
   const handleResetFilters = () => {
@@ -413,6 +408,10 @@ function ManageUsers() {
   };
 
 
+  // ======================================
+  // VIEW USER PROFILE
+  // ======================================
+
   const handleViewUser = (user) => {
 
     setEditingUserId(null);
@@ -422,14 +421,24 @@ function ManageUsers() {
   };
 
 
+  // ======================================
+  // EDIT USER
+  // ======================================
+
   const handleEdit = (user) => {
 
     setEditForm({
+
       name: user.name || "",
+
       email: user.email || "",
+
       phone: user.phone || "",
+
       location: user.location || "",
+
       status: getUserStatus(user),
+
     });
 
 
@@ -448,75 +457,11 @@ function ManageUsers() {
 
     const { name, value } = event.target;
 
+
     setEditForm((previousForm) => ({
       ...previousForm,
       [name]: value,
     }));
-
-  };
-
-
-  // ======================================
-  // APPROVE USER
-  // ======================================
-
-  const handleApprove = async (user) => {
-
-    if (approvingUserId) return;
-
-
-    const confirmed = window.confirm(
-      `Are you sure you want to approve ${
-        user.name || "this user"
-      }?`
-    );
-
-
-    if (!confirmed) return;
-
-
-    try {
-
-      setApprovingUserId(user.id);
-
-
-      const userRef = doc(
-        db,
-        "users",
-        user.id
-      );
-
-
-      await updateDoc(userRef, {
-
-        status: "Active",
-
-        approvedAt: serverTimestamp(),
-
-        updatedAt: serverTimestamp(),
-
-      });
-
-
-      alert("User approved successfully!");
-
-
-    } catch (error) {
-
-      console.error(
-        "Error approving user:",
-        error
-      );
-
-      alert(
-        "Unable to approve user. Please try again."
-      );
-
-    } finally {
-
-      setApprovingUserId(null);
-
-    }
 
   };
 
@@ -631,14 +576,14 @@ function ManageUsers() {
     if (deletingUserId) return;
 
 
-    const confirmed = window.confirm(
+    const confirmDelete = window.confirm(
       `Are you sure you want to delete the Firestore profile of ${
         user.name || "this Job Seeker"
       }? Their activity records will also be deleted. This will NOT delete their Firebase Authentication account.`
     );
 
 
-    if (!confirmed) return;
+    if (!confirmDelete) return;
 
 
     try {
@@ -661,14 +606,15 @@ function ManageUsers() {
       );
 
 
-      const activitySnapshot = await getDocs(activityRef);
+      // Fetch existing activity records.
+      const activitySnapshot = await getDocs(
+        activityRef
+      );
 
       const activityDocs = activitySnapshot.docs;
 
 
-      // Firestore batches support up to 500 writes.
-      // Use 450 operations per batch.
-
+      // Delete records in batches.
       for (
         let index = 0;
         index < activityDocs.length;
@@ -676,6 +622,7 @@ function ManageUsers() {
       ) {
 
         const batch = writeBatch(db);
+
 
         activityDocs
           .slice(index, index + 450)
@@ -685,18 +632,20 @@ function ManageUsers() {
 
           });
 
+
         await batch.commit();
 
       }
 
 
-      // Delete main Firestore user document.
+      // Delete main profile document.
       await deleteDoc(userRef);
 
 
       if (selectedUserId === user.id) {
         setSelectedUserId(null);
       }
+
 
       if (editingUserId === user.id) {
         setEditingUserId(null);
@@ -758,36 +707,37 @@ function ManageUsers() {
       <div className="manage-users-stats">
 
         <div className="manage-users-stat-card">
+
           <h3>Total Job Seekers</h3>
+
           <p>{totalUsers}</p>
+
         </div>
 
 
         <div className="manage-users-stat-card">
-          <h3>Pending Approvals</h3>
-          <p>{pendingUsers}</p>
-        </div>
 
-
-        <div className="manage-users-stat-card">
           <h3>Active Job Seekers</h3>
+
           <p>{activeUsers}</p>
+
         </div>
 
 
         <div className="manage-users-stat-card">
+
           <h3>Inactive Job Seekers</h3>
+
           <p>{inactiveUsers}</p>
+
         </div>
 
       </div>
 
 
-      {/* USERS TABLE */}
+      {/* USERS TABLE CARD */}
 
       <div className="manage-users-table-card">
-
-        {/* TABLE HEADER */}
 
         <div className="manage-users-table-header">
 
@@ -845,8 +795,6 @@ function ManageUsers() {
             >
 
               <option value="All">All Status</option>
-
-              <option value="Pending">Pending</option>
 
               <option value="Active">Active</option>
 
@@ -913,7 +861,7 @@ function ManageUsers() {
 
                   <tr key={user.id}>
 
-                    {/* USER NAME */}
+                    {/* NAME */}
 
                     <td>
 
@@ -978,21 +926,6 @@ function ManageUsers() {
                     <td>
 
                       <div className="manage-user-actions">
-
-                        {getUserStatus(user) === "Pending" && (
-
-                          <button
-                            type="button"
-                            className="approve-user-btn"
-                            title="Approve User"
-                            disabled={approvingUserId === user.id}
-                            onClick={() => handleApprove(user)}
-                          >
-                            <Check size={16} />
-                          </button>
-
-                        )}
-
 
                         <button
                           type="button"
@@ -1526,11 +1459,13 @@ function ManageUsers() {
                     onChange={handleEditChange}
                   >
 
-                    <option value="Pending">Pending</option>
+                    <option value="Active">
+                      Active
+                    </option>
 
-                    <option value="Active">Active</option>
-
-                    <option value="Inactive">Inactive</option>
+                    <option value="Inactive">
+                      Inactive
+                    </option>
 
                   </select>
 
