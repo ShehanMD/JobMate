@@ -1,7 +1,18 @@
-
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import {
+  Link,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+
+import {
+  doc,
+  getDoc,
+} from "firebase/firestore";
+
 import { useAuth } from "../context/AuthContext";
+
+import { db } from "../firebase/firebase";
 
 import {
   Mail,
@@ -13,23 +24,52 @@ import {
 
 import "./Login.css";
 
+
 function Login() {
   const { login, socialLogin } = useAuth();
+
   const navigate = useNavigate();
 
+  const location = useLocation();
+
   const [email, setEmail] = useState("");
+
   const [password, setPassword] = useState("");
+
   const [showPassword, setShowPassword] = useState(false);
+
   const [error, setError] = useState("");
+
   const [loading, setLoading] = useState(false);
 
-  // Friendly Firebase error messages
+
+  const successMessage = location.state?.message || "";
+
+
+  // ======================================
+  // FRIENDLY ERROR MESSAGES
+  // ======================================
+
   const getErrorMessage = (err) => {
+
     if (err.message === "ACCOUNT_NOT_REGISTERED") {
       return "Account not found. Please register first.";
     }
 
+    if (err.message === "ACCOUNT_PENDING_APPROVAL") {
+      return "Your account is waiting for administrator approval.";
+    }
+
+    if (err.message === "ACCOUNT_INACTIVE") {
+      return "Your account is inactive. Please contact the administrator.";
+    }
+
+    if (err.message === "ACCOUNT_PROFILE_NOT_FOUND") {
+      return "Your account profile could not be found. Please contact the administrator.";
+    }
+
     switch (err.code) {
+
       case "auth/invalid-credential":
       case "auth/wrong-password":
       case "auth/user-not-found":
@@ -61,20 +101,58 @@ function Login() {
     }
   };
 
-  // Navigate according to account permissions
+
+  // ======================================
+  // REDIRECT ACCORDING TO ACCOUNT TYPE
+  // ======================================
+
   const redirectUser = async (user) => {
+
     const token = await user.getIdTokenResult(true);
 
+    // Admin dashboard.
     if (token.claims.admin === true) {
-      navigate("/admin/dashboard", { replace: true });
+      navigate("/admin/dashboard", {
+        replace: true,
+      });
+
+      return;
+    }
+
+    // Load normal user profile.
+    const profileSnapshot = await getDoc(
+      doc(db, "users", user.uid)
+    );
+
+    const profile = profileSnapshot.exists()
+      ? profileSnapshot.data()
+      : null;
+
+    if (!profile) {
+      throw new Error("ACCOUNT_PROFILE_NOT_FOUND");
+    }
+
+    // Worker dashboard.
+    if (profile.role === "worker") {
+      navigate("/worker-dashboard", {
+        replace: true,
+      });
+
     } else {
-      navigate("/dashboard", { replace: true });
+      // Job Seeker dashboard.
+      navigate("/dashboard", {
+        replace: true,
+      });
     }
   };
 
-  // Email and Password Login
-  const handleLogin = async (e) => {
-    e.preventDefault();
+
+  // ======================================
+  // EMAIL / PASSWORD LOGIN
+  // ======================================
+
+  const handleLogin = async (event) => {
+    event.preventDefault();
 
     if (loading) return;
 
@@ -83,15 +161,16 @@ function Login() {
     try {
       setLoading(true);
 
-      const result = await login(
+      const user = await login(
         email.trim(),
         password
       );
 
-      await redirectUser(result.user);
+      await redirectUser(user);
 
     } catch (err) {
       console.error("Login error:", err);
+
       setError(getErrorMessage(err));
 
     } finally {
@@ -99,12 +178,17 @@ function Login() {
     }
   };
 
-  // Google / Facebook Login
+
+  // ======================================
+  // GOOGLE / FACEBOOK LOGIN
+  // ======================================
+
   const handleSocial = async (provider) => {
     if (loading) return;
 
+    setError("");
+
     try {
-      setError("");
       setLoading(true);
 
       const user = await socialLogin(provider);
@@ -113,6 +197,7 @@ function Login() {
 
     } catch (err) {
       console.error("Social login error:", err);
+
       setError(getErrorMessage(err));
 
     } finally {
@@ -120,12 +205,20 @@ function Login() {
     }
   };
 
+
+  // ======================================
+  // UI
+  // ======================================
+
   return (
     <div className="login-page">
 
       <div className="login-container">
 
+        {/* BRAND */}
+
         <div className="login-brand">
+
           <span>
             Patta<span>Jobs</span>
           </span>
@@ -133,67 +226,127 @@ function Login() {
           <p>
             Connecting People, Creating Opportunities.
           </p>
+
         </div>
+
 
         <div className="login-card">
 
+          {/* HEADING */}
+
           <div className="login-heading">
+
             <h1>Welcome Back!</h1>
-            <p>Sign in to continue to your account.</p>
+
+            <p>
+              Sign in to continue to your account.
+            </p>
+
           </div>
+
+
+          {/* SUCCESS MESSAGE */}
+
+          {successMessage && (
+            <div
+              className="auth-success"
+              role="status"
+              style={{
+                marginBottom: "16px",
+                padding: "12px 14px",
+                border: "1px solid #cdebd7",
+                borderRadius: "8px",
+                background: "#eaf8ef",
+                color: "#157347",
+                fontSize: "13px",
+              }}
+            >
+              {successMessage}
+            </div>
+          )}
+
+
+          {/* LOGIN FORM */}
 
           <form onSubmit={handleLogin}>
 
-            <label>Email Address</label>
+            <label htmlFor="login-email">
+              Email Address
+            </label>
 
             <div className="login-input">
+
               <Mail size={18} />
 
               <input
+                id="login-email"
                 type="email"
                 placeholder="Enter your email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(event) => setEmail(event.target.value)}
                 autoComplete="email"
                 required
+                disabled={loading}
               />
+
             </div>
 
-            <label>Password</label>
+
+            <label htmlFor="login-password">
+              Password
+            </label>
 
             <div className="login-input">
+
               <Lock size={18} />
 
               <input
+                id="login-password"
                 type={showPassword ? "text" : "password"}
                 placeholder="Enter your password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(event) => setPassword(event.target.value)}
                 autoComplete="current-password"
                 required
+                disabled={loading}
               />
 
               <button
                 type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
+                onClick={() =>
+                  setShowPassword((previous) => !previous)
+                }
                 aria-label={
-                  showPassword ? "Hide password" : "Show password"
+                  showPassword
+                    ? "Hide password"
+                    : "Show password"
                 }
               >
+
                 {showPassword
                   ? <EyeOff size={18} />
                   : <Eye size={18} />
                 }
+
               </button>
+
             </div>
 
+
+            {/* FORGOT PASSWORD */}
+
             <div className="login-options">
-              <span></span>
+
+              <span />
 
               <Link to="/forgot-password">
                 Forgot Password?
               </Link>
+
             </div>
+
+
+            {/* ERROR */}
 
             {error && (
               <div className="auth-error" role="alert">
@@ -201,19 +354,33 @@ function Login() {
               </div>
             )}
 
+
+            {/* SUBMIT */}
+
             <button
               type="submit"
               className="login-submit"
               disabled={loading}
             >
-              {loading ? "Signing In..." : "Sign In"}
+
+              {loading
+                ? "Signing In..."
+                : "Sign In"
+              }
+
             </button>
 
           </form>
 
+
+          {/* DIVIDER */}
+
           <div className="auth-divider">
             <span>OR CONTINUE WITH</span>
           </div>
+
+
+          {/* SOCIAL LOGIN */}
 
           <div className="social-buttons">
 
@@ -222,28 +389,47 @@ function Login() {
               onClick={() => handleSocial("google")}
               disabled={loading}
             >
+
               <Globe size={19} />
+
               Google
+
             </button>
+
 
             <button
               type="button"
               onClick={() => handleSocial("facebook")}
               disabled={loading}
             >
-              <span className="facebook-letter">f</span>
+
+              <span className="facebook-letter">
+                f
+              </span>
+
               Facebook
+
             </button>
 
           </div>
 
+
+          {/* REGISTER LINK */}
+
           <p className="auth-switch">
+
             Don't have an account?
-            <Link to="/register"> Create Account</Link>
+
+            <Link to="/register">
+              {" "}Create Account
+            </Link>
+
           </p>
 
         </div>
+
       </div>
+
     </div>
   );
 }
