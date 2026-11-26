@@ -1572,25 +1572,17 @@
 
 /* 4. GREEN LIGHT SWEEP */
 
+/* Fix mobile horizontal overflow caused by light sweep */
 .premium-light-sweep {
-  position: absolute;
-  bottom: 5%;
-  left: -30%;
-  width: 35%;
-  height: 2px;
-  z-index: 4;
-  border-radius: 50%;
+  max-width: 100%;
+  overflow: hidden;
   pointer-events: none;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    #16A34A,
-    #86EFAC,
-    transparent
-  );
-  box-shadow: 0 0 12px rgba(22, 163, 74, .7);
-  opacity: 0;
-  animation: premiumLightSweep 3s ease-in-out 14s infinite;
+}
+
+@media (max-width: 768px) {
+  .premium-light-sweep {
+    display: none;
+  }
 }
 
 /* =========================================
