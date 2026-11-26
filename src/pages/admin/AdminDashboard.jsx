@@ -1,3 +1,4 @@
+
 import React, {
   useEffect,
   useMemo,
@@ -40,7 +41,9 @@ import "./AdminDashboard.css";
 
 const readStorage = (key) => {
   try {
-    const parsed = JSON.parse(localStorage.getItem(key));
+    const parsed = JSON.parse(
+      localStorage.getItem(key)
+    );
 
     return Array.isArray(parsed) ? parsed : [];
 
@@ -97,7 +100,6 @@ const getLocalDateString = (date) => {
 // ======================================
 
 function AdminDashboard() {
-
   const [jobs, setJobs] = useState([]);
 
   const [users, setUsers] = useState([]);
@@ -124,15 +126,12 @@ function AdminDashboard() {
 
   useEffect(() => {
 
-    // ----------------------------------
-    // REAL-TIME USERS
-    // ----------------------------------
+    // USERS
 
     const unsubscribeUsers = onSnapshot(
       collection(db, "users"),
 
       (snapshot) => {
-
         const allUsers = snapshot.docs.map((document) => ({
           id: document.id,
           ...document.data(),
@@ -149,7 +148,6 @@ function AdminDashboard() {
             (user) => user.role === "worker"
           )
         );
-
       },
 
       (error) => {
@@ -161,9 +159,7 @@ function AdminDashboard() {
     );
 
 
-    // ----------------------------------
-    // REAL-TIME JOBS
-    // ----------------------------------
+    // JOBS
 
     const unsubscribeJobs = subscribeToAllJobs(
       (fetchedJobs) => {
@@ -179,12 +175,9 @@ function AdminDashboard() {
     );
 
 
-    // ----------------------------------
     // LOCAL STORAGE DATA
-    // ----------------------------------
 
     const loadLocalData = () => {
-
       setEmployers(
         readStorage("jobmate_employers")
       );
@@ -200,7 +193,6 @@ function AdminDashboard() {
       setReminders(
         readStorage("jobmate_reminders")
       );
-
     };
 
 
@@ -212,12 +204,9 @@ function AdminDashboard() {
     );
 
 
-    // ----------------------------------
     // CLEANUP
-    // ----------------------------------
 
     return () => {
-
       unsubscribeUsers();
 
       unsubscribeJobs();
@@ -226,14 +215,13 @@ function AdminDashboard() {
         "storage",
         loadLocalData
       );
-
     };
 
   }, []);
 
 
   // ======================================
-  // DATE / PENDING COUNTS
+  // DATE AND COUNTS
   // ======================================
 
   const today = new Date();
@@ -241,40 +229,36 @@ function AdminDashboard() {
   const todayString = getLocalDateString(today);
 
 
-  const pendingUsers = users.filter(
-    (user) =>
-      (user.status || "Pending").toLowerCase() === "pending"
-  );
-
-
-  const pendingWorkers = workers.filter((worker) => {
-
-    const status =
-      worker.verificationStatus ||
-      worker.status ||
-      "Pending";
-
-    return status.toLowerCase() === "pending";
-
-  });
-
-
-  const pendingEmployers = employers.filter(
-    (employer) =>
-      (
-        employer.approvalStatus ||
-        employer.status ||
-        "Pending"
+  // Pending worker verification.
+  const pendingWorkers = workers.filter(
+    (worker) =>
+      String(
+        worker.verificationStatus || ""
       ).toLowerCase() === "pending"
   );
 
 
-  const pendingReports = reportedJobs.filter(
-    (report) =>
-      (report.status || "Pending").toLowerCase() === "pending"
+  // Pending employer approvals.
+  const pendingEmployers = employers.filter(
+    (employer) => {
+      const status =
+        employer.approvalStatus ||
+        employer.status ||
+        "Pending";
+
+      return String(status).toLowerCase() === "pending";
+    }
   );
 
 
+  // Pending job reports.
+  const pendingReports = reportedJobs.filter(
+    (report) =>
+      String(report.status || "Pending").toLowerCase() === "pending"
+  );
+
+
+  // Unread notifications.
   const unreadNotifications = notifications.filter(
     (notification) => !notification.isRead
   ).length;
@@ -285,7 +269,6 @@ function AdminDashboard() {
   // ======================================
 
   const recentActivities = useMemo(() => {
-
     const activityItems = [
 
       ...users.map((user) => ({
@@ -295,10 +278,7 @@ function AdminDashboard() {
 
         type: "Job Seeker Registration",
 
-        date:
-          user.createdAt ||
-          user.joinedAt ||
-          user.joinedDate,
+        date: user.createdAt,
 
         icon: <Users size={17} />,
       })),
@@ -311,10 +291,7 @@ function AdminDashboard() {
 
         type: "Skilled Worker Registration",
 
-        date:
-          worker.createdAt ||
-          worker.joinedAt ||
-          worker.joinedDate,
+        date: worker.createdAt,
 
         icon: <UserCheck size={17} />,
       })),
@@ -350,22 +327,17 @@ function AdminDashboard() {
   // ======================================
 
   const upcomingEvents = useMemo(() => {
-
     const todayStart = new Date(
       `${todayString}T00:00:00`
     );
 
 
     const jobEvents = jobs
-
       .filter((job) => {
-
         const deadline = getDate(job.deadline);
 
         return deadline && deadline >= todayStart;
-
       })
-
       .map((job) => ({
         id: `job-${job.id}`,
 
@@ -378,15 +350,11 @@ function AdminDashboard() {
 
 
     const reminderEvents = reminders
-
       .filter((reminder) => {
-
         const date = getDate(reminder.date);
 
         return date && date >= todayStart;
-
       })
-
       .map((reminder) => ({
         id: `reminder-${reminder.id}`,
 
@@ -414,13 +382,14 @@ function AdminDashboard() {
   // ======================================
 
   const handleAddReminder = (event) => {
-
     event.preventDefault();
 
-    if (!reminderTitle.trim() || !reminderDate) {
+    if (
+      !reminderTitle.trim() ||
+      !reminderDate
+    ) {
       return;
     }
-
 
     const newReminder = {
       id: Date.now(),
@@ -430,12 +399,10 @@ function AdminDashboard() {
       date: reminderDate,
     };
 
-
     const updatedReminders = [
       ...reminders,
       newReminder,
     ];
-
 
     setReminders(updatedReminders);
 
@@ -444,11 +411,9 @@ function AdminDashboard() {
       JSON.stringify(updatedReminders)
     );
 
-
     setReminderTitle("");
 
     setReminderDate("");
-
   };
 
 
@@ -457,11 +422,9 @@ function AdminDashboard() {
   // ======================================
 
   const handleDeleteReminder = (id) => {
-
     const updatedReminders = reminders.filter(
       (reminder) => reminder.id !== id
     );
-
 
     setReminders(updatedReminders);
 
@@ -469,16 +432,14 @@ function AdminDashboard() {
       "jobmate_reminders",
       JSON.stringify(updatedReminders)
     );
-
   };
 
 
   // ======================================
-  // MARK NOTIFICATION AS READ
+  // MARK AS READ
   // ======================================
 
   const handleMarkAsRead = (id) => {
-
     const updatedNotifications = notifications.map(
       (notification) =>
         notification.id === id
@@ -489,14 +450,12 @@ function AdminDashboard() {
           : notification
     );
 
-
     setNotifications(updatedNotifications);
 
     localStorage.setItem(
       "jobmate_notifications",
       JSON.stringify(updatedNotifications)
     );
-
   };
 
 
@@ -505,7 +464,6 @@ function AdminDashboard() {
   // ======================================
 
   const handleMarkAllAsRead = () => {
-
     const updatedNotifications = notifications.map(
       (notification) => ({
         ...notification,
@@ -513,14 +471,12 @@ function AdminDashboard() {
       })
     );
 
-
     setNotifications(updatedNotifications);
 
     localStorage.setItem(
       "jobmate_notifications",
       JSON.stringify(updatedNotifications)
     );
-
   };
 
 
@@ -541,7 +497,7 @@ function AdminDashboard() {
             <h1>Dashboard Overview</h1>
 
             <p>
-              Welcome to the PattaJobs Admin Panel
+              Welcome to the Workora Admin Panel
             </p>
           </div>
 
@@ -552,7 +508,7 @@ function AdminDashboard() {
         </header>
 
 
-        {/* STATISTICS CARDS */}
+        {/* STATISTICS */}
 
         <section className="admin-stat-grid">
 
@@ -622,13 +578,9 @@ function AdminDashboard() {
 
                   <div className="admin-activity-info">
 
-                    <strong>
-                      {activity.title}
-                    </strong>
+                    <strong>{activity.title}</strong>
 
-                    <span>
-                      {activity.type}
-                    </span>
+                    <span>{activity.type}</span>
 
                   </div>
 
@@ -675,25 +627,6 @@ function AdminDashboard() {
 
           <div className="admin-approval-grid">
 
-            {/* JOB SEEKER APPROVALS */}
-
-            <div className="admin-approval-card">
-
-              <div className="admin-approval-icon user">
-                <Users size={22} />
-              </div>
-
-              <div>
-                <span>Job Seeker Approvals</span>
-
-                <strong>
-                  {pendingUsers.length}
-                </strong>
-              </div>
-
-            </div>
-
-
             {/* WORKER VERIFICATION */}
 
             <div className="admin-approval-card">
@@ -705,9 +638,7 @@ function AdminDashboard() {
               <div>
                 <span>Worker Verification</span>
 
-                <strong>
-                  {pendingWorkers.length}
-                </strong>
+                <strong>{pendingWorkers.length}</strong>
               </div>
 
             </div>
@@ -724,9 +655,7 @@ function AdminDashboard() {
               <div>
                 <span>Employer Approvals</span>
 
-                <strong>
-                  {pendingEmployers.length}
-                </strong>
+                <strong>{pendingEmployers.length}</strong>
               </div>
 
             </div>
@@ -743,9 +672,7 @@ function AdminDashboard() {
               <div>
                 <span>Reported Jobs</span>
 
-                <strong>
-                  {pendingReports.length}
-                </strong>
+                <strong>{pendingReports.length}</strong>
               </div>
 
             </div>
@@ -922,9 +849,11 @@ function AdminDashboard() {
           {/* UPCOMING EVENTS */}
 
           <div className="admin-upcoming-heading">
+
             <Clock size={18} />
 
             <h3>Upcoming Events</h3>
+
           </div>
 
 

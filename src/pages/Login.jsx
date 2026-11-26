@@ -1,16 +1,12 @@
+
 import { useState } from "react";
-import {
-  Link,
-  useLocation,
-  useNavigate,
-} from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 import {
   doc,
   getDoc,
 } from "firebase/firestore";
-
-import { useAuth } from "../context/AuthContext";
 
 import { db } from "../firebase/firebase";
 
@@ -30,8 +26,6 @@ function Login() {
 
   const navigate = useNavigate();
 
-  const location = useLocation();
-
   const [email, setEmail] = useState("");
 
   const [password, setPassword] = useState("");
@@ -43,29 +37,22 @@ function Login() {
   const [loading, setLoading] = useState(false);
 
 
-  const successMessage = location.state?.message || "";
-
-
   // ======================================
-  // FRIENDLY ERROR MESSAGES
+  // ERROR MESSAGES
   // ======================================
 
   const getErrorMessage = (err) => {
 
-    if (err.message === "ACCOUNT_NOT_REGISTERED") {
-      return "Account not found. Please register first.";
-    }
-
-    if (err.message === "ACCOUNT_PENDING_APPROVAL") {
-      return "Your account is waiting for administrator approval.";
+    if (err.message === "ACCOUNT_PROFILE_NOT_FOUND") {
+      return "Your account profile could not be found. Please register first or contact the administrator.";
     }
 
     if (err.message === "ACCOUNT_INACTIVE") {
       return "Your account is inactive. Please contact the administrator.";
     }
 
-    if (err.message === "ACCOUNT_PROFILE_NOT_FOUND") {
-      return "Your account profile could not be found. Please contact the administrator.";
+    if (err.message === "ACCOUNT_NOT_REGISTERED") {
+      return "Account not found. Please register first.";
     }
 
     switch (err.code) {
@@ -110,8 +97,10 @@ function Login() {
 
     const token = await user.getIdTokenResult(true);
 
-    // Admin dashboard.
+
+    // Admin Dashboard.
     if (token.claims.admin === true) {
+
       navigate("/admin/dashboard", {
         replace: true,
       });
@@ -119,30 +108,41 @@ function Login() {
       return;
     }
 
+
     // Load normal user profile.
     const profileSnapshot = await getDoc(
       doc(db, "users", user.uid)
     );
 
-    const profile = profileSnapshot.exists()
-      ? profileSnapshot.data()
-      : null;
 
-    if (!profile) {
+    if (!profileSnapshot.exists()) {
       throw new Error("ACCOUNT_PROFILE_NOT_FOUND");
     }
 
-    // Worker dashboard.
+
+    const profile = profileSnapshot.data();
+
+
+    // Block inactive accounts.
+    if (profile.status === "Inactive") {
+      throw new Error("ACCOUNT_INACTIVE");
+    }
+
+
+    // Worker Dashboard.
     if (profile.role === "worker") {
+
       navigate("/worker-dashboard", {
         replace: true,
       });
 
     } else {
-      // Job Seeker dashboard.
+
+      // Job Seeker Dashboard.
       navigate("/dashboard", {
         replace: true,
       });
+
     }
   };
 
@@ -152,6 +152,7 @@ function Login() {
   // ======================================
 
   const handleLogin = async (event) => {
+
     event.preventDefault();
 
     if (loading) return;
@@ -159,6 +160,7 @@ function Login() {
     setError("");
 
     try {
+
       setLoading(true);
 
       const user = await login(
@@ -169,12 +171,18 @@ function Login() {
       await redirectUser(user);
 
     } catch (err) {
-      console.error("Login error:", err);
+
+      console.error(
+        "Login error:",
+        err
+      );
 
       setError(getErrorMessage(err));
 
     } finally {
+
       setLoading(false);
+
     }
   };
 
@@ -184,11 +192,13 @@ function Login() {
   // ======================================
 
   const handleSocial = async (provider) => {
+
     if (loading) return;
 
     setError("");
 
     try {
+
       setLoading(true);
 
       const user = await socialLogin(provider);
@@ -196,12 +206,18 @@ function Login() {
       await redirectUser(user);
 
     } catch (err) {
-      console.error("Social login error:", err);
+
+      console.error(
+        "Social login error:",
+        err
+      );
 
       setError(getErrorMessage(err));
 
     } finally {
+
       setLoading(false);
+
     }
   };
 
@@ -245,27 +261,6 @@ function Login() {
           </div>
 
 
-          {/* SUCCESS MESSAGE */}
-
-          {successMessage && (
-            <div
-              className="auth-success"
-              role="status"
-              style={{
-                marginBottom: "16px",
-                padding: "12px 14px",
-                border: "1px solid #cdebd7",
-                borderRadius: "8px",
-                background: "#eaf8ef",
-                color: "#157347",
-                fontSize: "13px",
-              }}
-            >
-              {successMessage}
-            </div>
-          )}
-
-
           {/* LOGIN FORM */}
 
           <form onSubmit={handleLogin}>
@@ -283,7 +278,9 @@ function Login() {
                 type="email"
                 placeholder="Enter your email"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) =>
+                  setEmail(event.target.value)
+                }
                 autoComplete="email"
                 required
                 disabled={loading}
@@ -305,7 +302,9 @@ function Login() {
                 type={showPassword ? "text" : "password"}
                 placeholder="Enter your password"
                 value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                onChange={(event) =>
+                  setPassword(event.target.value)
+                }
                 autoComplete="current-password"
                 required
                 disabled={loading}
@@ -362,12 +361,10 @@ function Login() {
               className="login-submit"
               disabled={loading}
             >
-
               {loading
                 ? "Signing In..."
                 : "Sign In"
               }
-
             </button>
 
           </form>
