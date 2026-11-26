@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 
 import {
@@ -15,6 +14,7 @@ import {
   Clock,
   LogIn,
   UserRound,
+  Check,
 } from "lucide-react";
 
 import {
@@ -37,6 +37,7 @@ import DistrictDropdown from "../../components/common/DistrictDropdown";
 
 import "./ManageUsers.css";
 
+
 // ======================================
 // INITIAL FORM
 // ======================================
@@ -46,29 +47,30 @@ const initialEditForm = {
   email: "",
   phone: "",
   location: "",
-  status: "Active",
+  status: "Pending",
 };
+
 
 // ======================================
 // HELPER FUNCTIONS
 // ======================================
 
-// Convert Firestore Timestamp to JavaScript Date
 const toDate = (value) => {
   if (!value) return null;
 
-  if (typeof value.toDate === "function") {
-    return value.toDate();
-  }
+  const date =
+    typeof value.toDate === "function"
+      ? value.toDate()
+      : value instanceof Date
+        ? value
+        : new Date(value);
 
-  const date = value instanceof Date
-    ? value
-    : new Date(value);
-
-  return Number.isNaN(date.getTime()) ? null : date;
+  return Number.isNaN(date.getTime())
+    ? null
+    : date;
 };
 
-// Format date
+
 const formatDate = (value) => {
   const date = toDate(value);
 
@@ -81,7 +83,7 @@ const formatDate = (value) => {
   });
 };
 
-// Format date and time
+
 const formatDateTime = (value) => {
   const date = toDate(value);
 
@@ -101,17 +103,19 @@ const formatDateTime = (value) => {
   );
 };
 
-// Display fallback value
+
 const displayValue = (value) => {
   return value || "Not provided";
 };
 
-// Default status for older accounts
+
+// Profiles without a status are treated as Pending.
 const getUserStatus = (user) => {
-  return user.status || "Active";
+  return user.status || "Pending";
 };
 
-// Calculate unique active days from activity records
+
+// Calculate unique active days from activity records.
 const getActiveDays = (activities) => {
   const activeDates = new Set();
 
@@ -132,6 +136,7 @@ const getActiveDays = (activities) => {
   return activeDates.size;
 };
 
+
 // ======================================
 // MANAGE USERS COMPONENT
 // ======================================
@@ -145,38 +150,57 @@ function ManageUsers() {
   const [users, setUsers] = useState([]);
 
   const [loadingUsers, setLoadingUsers] = useState(true);
+
   const [usersError, setUsersError] = useState("");
 
   const [searchTerm, setSearchTerm] = useState("");
+
   const [statusFilter, setStatusFilter] = useState("All");
+
   const [locationFilter, setLocationFilter] = useState("All");
 
+
   const [selectedUserId, setSelectedUserId] = useState(null);
+
   const [editingUserId, setEditingUserId] = useState(null);
 
+
   const [activities, setActivities] = useState([]);
+
   const [loadingActivities, setLoadingActivities] = useState(false);
+
   const [activityError, setActivityError] = useState("");
+
 
   const [editForm, setEditForm] = useState(initialEditForm);
 
-  // Get selected user from current Firestore data
+
+  const [saving, setSaving] = useState(false);
+
+  const [approvingUserId, setApprovingUserId] = useState(null);
+
+  const [deletingUserId, setDeletingUserId] = useState(null);
+
+
+  // Get selected user from current Firestore data.
   const selectedUser =
     users.find((user) => user.id === selectedUserId) || null;
 
+
   // ======================================
-  // LOAD JOB SEEKERS FROM FIRESTORE
+  // REAL-TIME JOB SEEKER LIST
   // ======================================
 
   useEffect(() => {
 
     const usersRef = collection(db, "users");
 
-    // Only Job Seekers
+    // Only Job Seekers.
     const usersQuery = query(
       usersRef,
       where("role", "==", "user")
     );
+
 
     const unsubscribe = onSnapshot(
       usersQuery,
@@ -188,51 +212,75 @@ function ManageUsers() {
           ...document.data(),
         }));
 
-        // Sort newest registrations first
+
+        // Sort newest registrations first.
         usersList.sort((a, b) => {
 
-          const dateA = toDate(a.createdAt)?.getTime() || 0;
-          const dateB = toDate(b.createdAt)?.getTime() || 0;
+          const dateA =
+            toDate(a.createdAt)?.getTime() || 0;
+
+          const dateB =
+            toDate(b.createdAt)?.getTime() || 0;
 
           return dateB - dateA;
+
         });
 
+
         setUsers(usersList);
+
         setLoadingUsers(false);
+
         setUsersError("");
+
       },
+
 
       (error) => {
 
-        console.error("Error loading Job Seekers:", error);
+        console.error(
+          "Error loading Job Seekers:",
+          error
+        );
 
         setUsersError(
           "Unable to load Job Seekers. Please check your permissions."
         );
 
         setLoadingUsers(false);
+
       }
     );
+
 
     return () => unsubscribe();
 
   }, []);
 
+
   // ======================================
-  // LOAD SELECTED USER ACTIVITY
+  // REAL-TIME SELECTED USER ACTIVITY
   // ======================================
 
   useEffect(() => {
 
     if (!selectedUserId) {
+
       setActivities([]);
+
       setLoadingActivities(false);
+
       setActivityError("");
-      return;
+
+      return undefined;
+
     }
 
+
     setLoadingActivities(true);
+
     setActivityError("");
+
 
     const activityRef = collection(
       db,
@@ -241,10 +289,12 @@ function ManageUsers() {
       "activity"
     );
 
+
     const activityQuery = query(
       activityRef,
       orderBy("createdAt", "desc")
     );
+
 
     const unsubscribe = onSnapshot(
       activityQuery,
@@ -256,23 +306,37 @@ function ManageUsers() {
           ...document.data(),
         }));
 
+
         setActivities(activityList);
+
         setLoadingActivities(false);
+
         setActivityError("");
+
       },
+
 
       (error) => {
 
-        console.error("Error loading user activity:", error);
+        console.error(
+          "Error loading user activity:",
+          error
+        );
 
-        setActivityError("Unable to load activity history.");
+        setActivityError(
+          "Unable to load activity history."
+        );
+
         setLoadingActivities(false);
+
       }
     );
+
 
     return () => unsubscribe();
 
   }, [selectedUserId]);
+
 
   // ======================================
   // FILTER JOB SEEKERS
@@ -282,22 +346,35 @@ function ManageUsers() {
 
     const search = searchTerm.trim().toLowerCase();
 
+
     const matchesSearch =
       String(user.name || "").toLowerCase().includes(search) ||
+
       String(user.email || "").toLowerCase().includes(search) ||
+
       String(user.phone || "").toLowerCase().includes(search);
+
 
     const matchesStatus =
       statusFilter === "All" ||
       getUserStatus(user) === statusFilter;
 
+
     const matchesLocation =
       locationFilter === "All" ||
+
       String(user.location || "").toLowerCase() ===
         locationFilter.toLowerCase();
 
-    return matchesSearch && matchesStatus && matchesLocation;
+
+    return (
+      matchesSearch &&
+      matchesStatus &&
+      matchesLocation
+    );
+
   });
+
 
   // ======================================
   // STATISTICS
@@ -305,40 +382,45 @@ function ManageUsers() {
 
   const totalUsers = users.length;
 
+
+  const pendingUsers = users.filter(
+    (user) => getUserStatus(user) === "Pending"
+  ).length;
+
+
   const activeUsers = users.filter(
     (user) => getUserStatus(user) === "Active"
   ).length;
+
 
   const inactiveUsers = users.filter(
     (user) => getUserStatus(user) === "Inactive"
   ).length;
 
+
   // ======================================
-  // RESET FILTERS
+  // FILTER RESET / MODALS
   // ======================================
 
   const handleResetFilters = () => {
 
     setSearchTerm("");
+
     setStatusFilter("All");
+
     setLocationFilter("All");
 
   };
 
-  // ======================================
-  // VIEW USER PROFILE
-  // ======================================
 
   const handleViewUser = (user) => {
 
     setEditingUserId(null);
+
     setSelectedUserId(user.id);
 
   };
 
-  // ======================================
-  // OPEN EDIT MODAL
-  // ======================================
 
   const handleEdit = (user) => {
 
@@ -350,18 +432,21 @@ function ManageUsers() {
       status: getUserStatus(user),
     });
 
+
     setSelectedUserId(null);
+
     setEditingUserId(user.id);
 
   };
+
 
   // ======================================
   // HANDLE EDIT INPUTS
   // ======================================
 
-  const handleEditChange = (e) => {
+  const handleEditChange = (event) => {
 
-    const { name, value } = e.target;
+    const { name, value } = event.target;
 
     setEditForm((previousForm) => ({
       ...previousForm,
@@ -370,24 +455,96 @@ function ManageUsers() {
 
   };
 
+
+  // ======================================
+  // APPROVE USER
+  // ======================================
+
+  const handleApprove = async (user) => {
+
+    if (approvingUserId) return;
+
+
+    const confirmed = window.confirm(
+      `Are you sure you want to approve ${
+        user.name || "this user"
+      }?`
+    );
+
+
+    if (!confirmed) return;
+
+
+    try {
+
+      setApprovingUserId(user.id);
+
+
+      const userRef = doc(
+        db,
+        "users",
+        user.id
+      );
+
+
+      await updateDoc(userRef, {
+
+        status: "Active",
+
+        approvedAt: serverTimestamp(),
+
+        updatedAt: serverTimestamp(),
+
+      });
+
+
+      alert("User approved successfully!");
+
+
+    } catch (error) {
+
+      console.error(
+        "Error approving user:",
+        error
+      );
+
+      alert(
+        "Unable to approve user. Please try again."
+      );
+
+    } finally {
+
+      setApprovingUserId(null);
+
+    }
+
+  };
+
+
   // ======================================
   // SAVE USER DETAILS
   // ======================================
 
-  const handleSaveEdit = async (e) => {
+  const handleSaveEdit = async (event) => {
 
-    e.preventDefault();
+    event.preventDefault();
 
-    if (
-      !editForm.name.trim() ||
-      !editForm.email.trim() ||
-      !editForm.location
-    ) {
-      alert("Please fill all required fields.");
+    if (saving) return;
+
+
+    if (!editForm.name.trim()) {
+
+      alert("Please enter the user's name.");
+
       return;
+
     }
 
+
     try {
+
+      setSaving(true);
+
 
       const userRef = doc(
         db,
@@ -395,7 +552,7 @@ function ManageUsers() {
         editingUserId
       );
 
-      // Update Firestore document
+
       await updateDoc(userRef, {
 
         name: editForm.name.trim(),
@@ -410,20 +567,34 @@ function ManageUsers() {
 
       });
 
+
       setEditingUserId(null);
+
       setEditForm(initialEditForm);
+
 
       alert("Job Seeker updated successfully!");
 
+
     } catch (error) {
 
-      console.error("Error updating Job Seeker:", error);
+      console.error(
+        "Error updating Job Seeker:",
+        error
+      );
 
-      alert("Unable to update Job Seeker. Please try again.");
+      alert(
+        "Unable to update Job Seeker. Please try again."
+      );
+
+    } finally {
+
+      setSaving(false);
 
     }
 
   };
+
 
   // ======================================
   // CLOSE EDIT MODAL
@@ -431,10 +602,14 @@ function ManageUsers() {
 
   const handleCloseEdit = () => {
 
+    if (saving) return;
+
     setEditingUserId(null);
+
     setEditForm(initialEditForm);
 
   };
+
 
   // ======================================
   // CLOSE PROFILE MODAL
@@ -446,25 +621,37 @@ function ManageUsers() {
 
   };
 
+
   // ======================================
   // DELETE USER PROFILE AND ACTIVITY
   // ======================================
 
   const handleDelete = async (user) => {
 
-    const confirmDelete = window.confirm(
-      `Are you sure you want to delete the Firestore profile of ${user.name || "this Job Seeker"}? Their activity records will also be deleted. This will NOT delete their Firebase Authentication account.`
+    if (deletingUserId) return;
+
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the Firestore profile of ${
+        user.name || "this Job Seeker"
+      }? Their activity records will also be deleted. This will NOT delete their Firebase Authentication account.`
     );
 
-    if (!confirmDelete) return;
+
+    if (!confirmed) return;
+
 
     try {
+
+      setDeletingUserId(user.id);
+
 
       const userRef = doc(
         db,
         "users",
         user.id
       );
+
 
       const activityRef = collection(
         db,
@@ -473,27 +660,39 @@ function ManageUsers() {
         "activity"
       );
 
-      // Get existing activity records
+
       const activitySnapshot = await getDocs(activityRef);
 
-      // Delete in batches to avoid the 500-operation limit
       const activityDocs = activitySnapshot.docs;
 
-      for (let i = 0; i < activityDocs.length; i += 450) {
+
+      // Firestore batches support up to 500 writes.
+      // Use 450 operations per batch.
+
+      for (
+        let index = 0;
+        index < activityDocs.length;
+        index += 450
+      ) {
 
         const batch = writeBatch(db);
 
         activityDocs
-          .slice(i, i + 450)
+          .slice(index, index + 450)
           .forEach((activityDoc) => {
+
             batch.delete(activityDoc.ref);
+
           });
 
         await batch.commit();
+
       }
 
-      // Delete the main Firestore user document
+
+      // Delete main Firestore user document.
       await deleteDoc(userRef);
+
 
       if (selectedUserId === user.id) {
         setSelectedUserId(null);
@@ -503,17 +702,31 @@ function ManageUsers() {
         setEditingUserId(null);
       }
 
-      alert("Firestore user profile deleted successfully!");
+
+      alert(
+        "Firestore user profile deleted successfully!"
+      );
+
 
     } catch (error) {
 
-      console.error("Error deleting Job Seeker:", error);
+      console.error(
+        "Error deleting Job Seeker:",
+        error
+      );
 
-      alert("Unable to delete Job Seeker. Please try again.");
+      alert(
+        "Unable to delete Job Seeker. Please try again."
+      );
+
+    } finally {
+
+      setDeletingUserId(null);
 
     }
 
   };
+
 
   // ======================================
   // RENDER
@@ -523,57 +736,54 @@ function ManageUsers() {
 
     <div className="manage-users-page">
 
-      {/* ============================== */}
       {/* PAGE HEADER */}
-      {/* ============================== */}
 
       <div className="manage-users-header">
 
         <div>
+
           <h1>Manage Users</h1>
 
           <p>
             View and manage registered Job Seekers.
           </p>
+
         </div>
 
       </div>
 
-      {/* ============================== */}
+
       {/* STATISTICS */}
-      {/* ============================== */}
 
       <div className="manage-users-stats">
 
         <div className="manage-users-stat-card">
-
           <h3>Total Job Seekers</h3>
-
           <p>{totalUsers}</p>
-
         </div>
 
-        <div className="manage-users-stat-card">
 
+        <div className="manage-users-stat-card">
+          <h3>Pending Approvals</h3>
+          <p>{pendingUsers}</p>
+        </div>
+
+
+        <div className="manage-users-stat-card">
           <h3>Active Job Seekers</h3>
-
           <p>{activeUsers}</p>
-
         </div>
 
+
         <div className="manage-users-stat-card">
-
           <h3>Inactive Job Seekers</h3>
-
           <p>{inactiveUsers}</p>
-
         </div>
 
       </div>
 
-      {/* ============================== */}
-      {/* USERS TABLE CARD */}
-      {/* ============================== */}
+
+      {/* USERS TABLE */}
 
       <div className="manage-users-table-card">
 
@@ -591,6 +801,7 @@ function ManageUsers() {
 
           </div>
 
+
           {/* SEARCH AND FILTERS */}
 
           <div className="manage-users-controls">
@@ -603,10 +814,13 @@ function ManageUsers() {
                 type="text"
                 placeholder="Search job seekers..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(event) =>
+                  setSearchTerm(event.target.value)
+                }
               />
 
             </div>
+
 
             <DistrictDropdown
               value={
@@ -614,26 +828,32 @@ function ManageUsers() {
                   ? ""
                   : locationFilter
               }
-              onChange={(e) =>
-                setLocationFilter(e.target.value || "All")
+              onChange={(event) =>
+                setLocationFilter(
+                  event.target.value || "All"
+                )
               }
               placeholder="All Districts"
             />
 
+
             <select
               value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter(e.target.value)
+              onChange={(event) =>
+                setStatusFilter(event.target.value)
               }
             >
 
               <option value="All">All Status</option>
+
+              <option value="Pending">Pending</option>
 
               <option value="Active">Active</option>
 
               <option value="Inactive">Inactive</option>
 
             </select>
+
 
             <button
               type="button"
@@ -647,9 +867,8 @@ function ManageUsers() {
 
         </div>
 
-        {/* ============================== */}
-        {/* TABLE */}
-        {/* ============================== */}
+
+        {/* USERS TABLE */}
 
         <div className="manage-users-table-wrapper">
 
@@ -668,6 +887,7 @@ function ManageUsers() {
               </tr>
 
             </thead>
+
 
             <tbody>
 
@@ -711,11 +931,13 @@ function ManageUsers() {
 
                     </td>
 
+
                     {/* EMAIL */}
 
                     <td>
                       {user.email || "Not provided"}
                     </td>
+
 
                     {/* PHONE */}
 
@@ -723,17 +945,20 @@ function ManageUsers() {
                       {user.phone || "Not provided"}
                     </td>
 
+
                     {/* DISTRICT */}
 
                     <td>
                       {user.location || "Not provided"}
                     </td>
 
+
                     {/* JOINED DATE */}
 
                     <td>
                       {formatDate(user.createdAt)}
                     </td>
+
 
                     {/* STATUS */}
 
@@ -747,11 +972,27 @@ function ManageUsers() {
 
                     </td>
 
+
                     {/* ACTIONS */}
 
                     <td>
 
                       <div className="manage-user-actions">
+
+                        {getUserStatus(user) === "Pending" && (
+
+                          <button
+                            type="button"
+                            className="approve-user-btn"
+                            title="Approve User"
+                            disabled={approvingUserId === user.id}
+                            onClick={() => handleApprove(user)}
+                          >
+                            <Check size={16} />
+                          </button>
+
+                        )}
+
 
                         <button
                           type="button"
@@ -762,6 +1003,7 @@ function ManageUsers() {
                           <Eye size={16} />
                         </button>
 
+
                         <button
                           type="button"
                           className="edit-user-btn"
@@ -771,10 +1013,12 @@ function ManageUsers() {
                           <Pencil size={16} />
                         </button>
 
+
                         <button
                           type="button"
                           className="delete-user-btn"
                           title="Delete User Profile"
+                          disabled={deletingUserId === user.id}
                           onClick={() => handleDelete(user)}
                         >
                           <Trash2 size={16} />
@@ -804,6 +1048,7 @@ function ManageUsers() {
 
         </div>
 
+
         {/* RESULTS */}
 
         <div className="manage-users-results">
@@ -814,9 +1059,10 @@ function ManageUsers() {
 
       </div>
 
-      {/* ====================================== */}
-      {/* VIEW USER PROFILE MODAL */}
-      {/* ====================================== */}
+
+      {/* ======================================
+          VIEW USER PROFILE MODAL
+      ====================================== */}
 
       {selectedUser && (
 
@@ -827,7 +1073,7 @@ function ManageUsers() {
 
           <div
             className="user-profile-modal"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
           >
 
             {/* PROFILE HEADER */}
@@ -844,6 +1090,7 @@ function ManageUsers() {
 
               </div>
 
+
               <button
                 type="button"
                 className="user-profile-close-btn"
@@ -853,6 +1100,7 @@ function ManageUsers() {
               </button>
 
             </div>
+
 
             {/* PROFILE SUMMARY */}
 
@@ -865,12 +1113,6 @@ function ManageUsers() {
                   <img
                     src={selectedUser.photoURL}
                     alt={selectedUser.name || "User"}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      borderRadius: "50%",
-                    }}
                   />
 
                 ) : (
@@ -880,6 +1122,7 @@ function ManageUsers() {
                 )}
 
               </div>
+
 
               <div className="user-profile-identity">
 
@@ -901,6 +1144,7 @@ function ManageUsers() {
 
             </div>
 
+
             {/* PERSONAL INFORMATION */}
 
             <div className="user-profile-section">
@@ -909,6 +1153,7 @@ function ManageUsers() {
                 <UserRound size={18} />
                 Personal Information
               </h3>
+
 
               <div className="user-profile-details-grid">
 
@@ -925,6 +1170,7 @@ function ManageUsers() {
 
                 </div>
 
+
                 <div className="user-profile-detail">
 
                   <span>
@@ -938,6 +1184,7 @@ function ManageUsers() {
 
                 </div>
 
+
                 <div className="user-profile-detail">
 
                   <span>
@@ -950,6 +1197,7 @@ function ManageUsers() {
                   </strong>
 
                 </div>
+
 
                 <div className="user-profile-detail">
 
@@ -968,6 +1216,7 @@ function ManageUsers() {
 
             </div>
 
+
             {/* ACTIVITY OVERVIEW */}
 
             <div className="user-profile-section">
@@ -976,6 +1225,7 @@ function ManageUsers() {
                 <Activity size={18} />
                 Activity Overview
               </h3>
+
 
               <div className="user-activity-stats">
 
@@ -989,11 +1239,14 @@ function ManageUsers() {
                       {getActiveDays(activities)}
                     </strong>
 
-                    <span>Recorded Active Days</span>
+                    <span>
+                      Recorded Active Days
+                    </span>
 
                   </div>
 
                 </div>
+
 
                 <div className="user-activity-stat">
 
@@ -1005,11 +1258,14 @@ function ManageUsers() {
                       {selectedUser.totalLogins ?? 0}
                     </strong>
 
-                    <span>Total Logins</span>
+                    <span>
+                      Total Logins
+                    </span>
 
                   </div>
 
                 </div>
+
 
                 <div className="user-activity-stat">
 
@@ -1021,7 +1277,9 @@ function ManageUsers() {
                       {formatDate(selectedUser.lastActive)}
                     </strong>
 
-                    <span>Last Active</span>
+                    <span>
+                      Last Active
+                    </span>
 
                   </div>
 
@@ -1031,6 +1289,7 @@ function ManageUsers() {
 
             </div>
 
+
             {/* ACTIVITY HISTORY */}
 
             <div className="user-profile-section">
@@ -1039,6 +1298,7 @@ function ManageUsers() {
                 <Clock size={18} />
                 Recent Activity
               </h3>
+
 
               {loadingActivities ? (
 
@@ -1063,7 +1323,7 @@ function ManageUsers() {
                       key={activity.id}
                     >
 
-                      <div className="user-activity-dot"></div>
+                      <div className="user-activity-dot" />
 
                       <div className="user-activity-history-content">
 
@@ -1093,6 +1353,7 @@ function ManageUsers() {
 
             </div>
 
+
             {/* PROFILE FOOTER */}
 
             <div className="user-profile-modal-footer">
@@ -1105,6 +1366,7 @@ function ManageUsers() {
                 <Pencil size={16} />
                 Edit Profile
               </button>
+
 
               <button
                 type="button"
@@ -1122,9 +1384,10 @@ function ManageUsers() {
 
       )}
 
-      {/* ====================================== */}
-      {/* EDIT USER MODAL */}
-      {/* ====================================== */}
+
+      {/* ======================================
+          EDIT USER MODAL
+      ====================================== */}
 
       {editingUserId && (
 
@@ -1135,7 +1398,7 @@ function ManageUsers() {
 
           <div
             className="edit-user-modal"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
           >
 
             {/* EDIT HEADER */}
@@ -1152,15 +1415,18 @@ function ManageUsers() {
 
               </div>
 
+
               <button
                 type="button"
                 className="edit-user-close-btn"
                 onClick={handleCloseEdit}
+                disabled={saving}
               >
                 <X size={20} />
               </button>
 
             </div>
+
 
             {/* EDIT FORM */}
 
@@ -1172,9 +1438,12 @@ function ManageUsers() {
 
                 <div className="edit-user-field">
 
-                  <label>Full Name</label>
+                  <label htmlFor="edit-user-name">
+                    Full Name
+                  </label>
 
                   <input
+                    id="edit-user-name"
                     type="text"
                     name="name"
                     value={editForm.name}
@@ -1185,13 +1454,17 @@ function ManageUsers() {
 
                 </div>
 
+
                 {/* EMAIL */}
 
                 <div className="edit-user-field">
 
-                  <label>Email Address</label>
+                  <label htmlFor="edit-user-email">
+                    Email Address
+                  </label>
 
                   <input
+                    id="edit-user-email"
                     type="email"
                     name="email"
                     value={editForm.email}
@@ -1201,13 +1474,17 @@ function ManageUsers() {
 
                 </div>
 
+
                 {/* PHONE */}
 
                 <div className="edit-user-field">
 
-                  <label>Phone Number</label>
+                  <label htmlFor="edit-user-phone">
+                    Phone Number
+                  </label>
 
                   <input
+                    id="edit-user-phone"
                     type="tel"
                     name="phone"
                     value={editForm.phone}
@@ -1216,6 +1493,7 @@ function ManageUsers() {
                   />
 
                 </div>
+
 
                 {/* DISTRICT */}
 
@@ -1227,23 +1505,28 @@ function ManageUsers() {
                     name="location"
                     value={editForm.location}
                     onChange={handleEditChange}
-                    required
                     placeholder="Select District"
                   />
 
                 </div>
 
+
                 {/* STATUS */}
 
                 <div className="edit-user-field edit-user-full-width">
 
-                  <label>Account Status</label>
+                  <label htmlFor="edit-user-status">
+                    Account Status
+                  </label>
 
                   <select
+                    id="edit-user-status"
                     name="status"
                     value={editForm.status}
                     onChange={handleEditChange}
                   >
+
+                    <option value="Pending">Pending</option>
 
                     <option value="Active">Active</option>
 
@@ -1255,6 +1538,7 @@ function ManageUsers() {
 
               </div>
 
+
               {/* FORM ACTIONS */}
 
               <div className="edit-user-modal-actions">
@@ -1263,15 +1547,18 @@ function ManageUsers() {
                   type="button"
                   className="edit-user-cancel-btn"
                   onClick={handleCloseEdit}
+                  disabled={saving}
                 >
                   Cancel
                 </button>
 
+
                 <button
                   type="submit"
                   className="edit-user-save-btn"
+                  disabled={saving}
                 >
-                  Save Changes
+                  {saving ? "Saving..." : "Save Changes"}
                 </button>
 
               </div>
@@ -1287,7 +1574,6 @@ function ManageUsers() {
     </div>
 
   );
-
 }
 
 export default ManageUsers;

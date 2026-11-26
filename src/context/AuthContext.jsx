@@ -1,8 +1,8 @@
-
 import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -15,6 +15,8 @@ import {
   onAuthStateChanged,
   signOut,
   getIdTokenResult,
+  deleteUser,
+  getAdditionalUserInfo,
 } from "firebase/auth";
 
 import {
@@ -30,56 +32,71 @@ import {
 
 import { auth, db } from "../firebase/firebase";
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
 // ======================================
-// CREATE USER PROFILE
+// CREATE / UPDATE USER PROFILE
 // ======================================
 
-const createUserProfile = async (user, role, name) => {
+const createUserProfile = async (
+  user,
+  role,
+  name = "",
+  phone = "",
+  location = ""
+) => {
   const userRef = doc(db, "users", user.uid);
+
   const snapshot = await getDoc(userRef);
 
   if (!snapshot.exists()) {
-
     const profile = {
       uid: user.uid,
+
       name: name || user.displayName || "New User",
 
-      email: user.email,
+      email: user.email || "",
+
       photoURL: user.photoURL || "",
 
-      role: role,
+      role: role === "worker" ? "worker" : "user",
 
-      phone: "",
-      location: "",
-      status: "Active",
+      phone: phone || "",
+
+      location: location || "",
+
+      // All new accounts require Admin approval.
+      status: "Pending",
 
       totalLogins: 0,
+
       lastActive: null,
 
       createdAt: serverTimestamp(),
+
       updatedAt: serverTimestamp(),
     };
 
     await setDoc(userRef, profile);
 
   } else {
+    // Initialize missing fields in older profiles.
+    // Missing status is treated as Pending.
 
-    // Fill missing fields for older accounts
     const existingData = snapshot.data();
+
     const updates = {};
 
     if (!("phone" in existingData)) {
-      updates.phone = "";
+      updates.phone = phone || "";
     }
 
     if (!("location" in existingData)) {
-      updates.location = "";
+      updates.location = location || "";
     }
 
     if (!("status" in existingData)) {
-      updates.status = "Active";
+      updates.status = "Pending";
     }
 
     if (!("totalLogins" in existingData)) {
@@ -92,17 +109,67 @@ const createUserProfile = async (user, role, name) => {
 
     if (Object.keys(updates).length > 0) {
       updates.updatedAt = serverTimestamp();
+
       await updateDoc(userRef, updates);
     }
   }
 
   const updatedSnapshot = await getDoc(userRef);
 
-  return updatedSnapshot.data();
+  return updatedSnapshot.exists()
+    ? updatedSnapshot.data()
+    : null;
 };
 
+
 // ======================================
-// RECORD LOGIN ACTIVITY
+// CHECK ACCOUNT APPROVAL
+// ======================================
+
+const checkUserApproval = async (user) => {
+  const token = await getIdTokenResult(user, true);
+
+  const admin = token.claims.admin === true;
+
+  const userRef = doc(db, "users", user.uid);
+
+  const userSnapshot = await getDoc(userRef);
+
+  const profile = userSnapshot.exists()
+    ? userSnapshot.data()
+    : null;
+
+  // Admin accounts do not require normal user approval.
+  if (admin) {
+    return {
+      profile,
+      isAdmin: true,
+    };
+  }
+
+  if (!profile) {
+    throw new Error("ACCOUNT_PROFILE_NOT_FOUND");
+  }
+
+  const status = profile.status || "Pending";
+
+  if (status === "Pending") {
+    throw new Error("ACCOUNT_PENDING_APPROVAL");
+  }
+
+  if (status !== "Active") {
+    throw new Error("ACCOUNT_INACTIVE");
+  }
+
+  return {
+    profile,
+    isAdmin: false,
+  };
+};
+
+
+// ======================================
+// RECORD USER LOGIN ACTIVITY
 // ======================================
 
 const recordUserLogin = async (user) => {
@@ -111,179 +178,500 @@ const recordUserLogin = async (user) => {
 
     const userSnapshot = await getDoc(userRef);
 
-    // Skip tracking when a Firestore profile does not exist
+    // Admin accounts may not have a users document.
     if (!userSnapshot.exists()) {
-      console.warn("User profile not found. Login was not tracked.");
       return;
     }
 
     const batch = writeBatch(db);
 
-    // Update login statistics
+    // Update login statistics.
     batch.update(userRef, {
       totalLogins: increment(1),
+
       lastActive: serverTimestamp(),
+
       updatedAt: serverTimestamp(),
     });
 
-    // Create activity history record
+    // Create activity history record.
     const activityRef = doc(
       collection(userRef, "activity")
     );
 
     batch.set(activityRef, {
       action: "Logged into the platform",
+
       createdAt: serverTimestamp(),
     });
 
     await batch.commit();
 
   } catch (error) {
-    // Login should remain successful even if activity tracking fails
-    console.error("Login activity tracking failed:", error);
+    // Activity tracking should not prevent an approved user from logging in.
+    console.error(
+      "Login activity tracking failed:",
+      error
+    );
   }
 };
+
 
 // ======================================
 // AUTH PROVIDER
 // ======================================
 
 export function AuthProvider({ children }) {
-
   const [currentUser, setCurrentUser] = useState(null);
+
   const [userData, setUserData] = useState(null);
+
   const [isAdmin, setIsAdmin] = useState(false);
+
   const [loading, setLoading] = useState(true);
 
-  // Email Registration
-  const register = async (name, email, password, role) => {
+  // Prevent auth-state listener conflicts during register/login/logout.
+  const authActionInProgress = useRef(false);
 
-    const result = await createUserWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
 
-    const profile = await createUserProfile(
-      result.user,
-      role,
-      name
-    );
+  const clearAuthState = () => {
+    setCurrentUser(null);
 
-    setUserData(profile);
+    setUserData(null);
 
-    return result.user;
+    setIsAdmin(false);
   };
 
-  // Email Login
-  const login = async (email, password) => {
 
-    const result = await signInWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
+  // ======================================
+  // EMAIL REGISTRATION
+  // ======================================
 
-    // Track successful login
-    await recordUserLogin(result.user);
+  const register = async (
+    name,
+    email,
+    password,
+    role,
+    phone,
+    location
+  ) => {
+    authActionInProgress.current = true;
 
-    return result;
-  };
+    let createdUser = null;
 
-  // Google / Facebook Registration
-  const socialRegister = async (providerName, role) => {
+    let profileCreated = false;
 
-    const provider =
-      providerName === "google"
-        ? new GoogleAuthProvider()
-        : new FacebookAuthProvider();
+    try {
+      // Create Firebase Authentication account.
+      const result = await createUserWithEmailAndPassword(
+        auth,
+        email.trim(),
+        password
+      );
 
-    const result = await signInWithPopup(auth, provider);
+      createdUser = result.user;
 
-    const profile = await createUserProfile(
-      result.user,
-      role
-    );
+      // Save all registration details in Firestore.
+      await createUserProfile(
+        result.user,
+        role,
+        name,
+        phone,
+        location
+      );
 
-    setUserData(profile);
+      profileCreated = true;
 
-    return result.user;
-  };
-
-  // Google / Facebook Login
-  const socialLogin = async (providerName) => {
-
-    const provider =
-      providerName === "google"
-        ? new GoogleAuthProvider()
-        : new FacebookAuthProvider();
-
-    const result = await signInWithPopup(auth, provider);
-
-    const userRef = doc(db, "users", result.user.uid);
-    const snapshot = await getDoc(userRef);
-
-    // Only existing registered accounts can login
-    if (!snapshot.exists()) {
-
+      // Sign out until an Admin approves the account.
       await signOut(auth);
 
-      throw new Error("ACCOUNT_NOT_REGISTERED");
+      clearAuthState();
+
+      return result.user;
+
+    } catch (error) {
+      // Roll back a newly created Auth account if Firestore
+      // profile creation failed.
+
+      if (
+        createdUser &&
+        !profileCreated &&
+        auth.currentUser?.uid === createdUser.uid
+      ) {
+        try {
+          await deleteUser(createdUser);
+
+        } catch (deleteError) {
+          console.error(
+            "Unable to roll back the incomplete account:",
+            deleteError
+          );
+
+          if (auth.currentUser) {
+            await signOut(auth);
+          }
+        }
+
+      } else if (auth.currentUser) {
+        try {
+          await signOut(auth);
+
+        } catch (signOutError) {
+          console.error(
+            "Unable to sign out after registration error:",
+            signOutError
+          );
+        }
+      }
+
+      clearAuthState();
+
+      throw error;
+
+    } finally {
+      authActionInProgress.current = false;
     }
-
-    // Track successful login
-    await recordUserLogin(result.user);
-
-    return result.user;
   };
 
-  // Logout
-  const logout = () => signOut(auth);
 
-  // Listen for authentication changes
+  // ======================================
+  // EMAIL LOGIN
+  // ======================================
+
+  const login = async (email, password) => {
+    authActionInProgress.current = true;
+
+    try {
+      const result = await signInWithEmailAndPassword(
+        auth,
+        email.trim(),
+        password
+      );
+
+      // Check account approval.
+      const approval = await checkUserApproval(result.user);
+
+      // Record login only for normal approved users.
+      if (!approval.isAdmin) {
+        await recordUserLogin(result.user);
+      }
+
+      // Get latest profile data.
+      const latestSnapshot = await getDoc(
+        doc(db, "users", result.user.uid)
+      );
+
+      const latestProfile = latestSnapshot.exists()
+        ? latestSnapshot.data()
+        : approval.profile;
+
+      setCurrentUser(result.user);
+
+      setUserData(latestProfile || null);
+
+      setIsAdmin(approval.isAdmin);
+
+      return result.user;
+
+    } catch (error) {
+      if (auth.currentUser) {
+        try {
+          await signOut(auth);
+
+        } catch (signOutError) {
+          console.error(
+            "Unable to sign out after login error:",
+            signOutError
+          );
+        }
+      }
+
+      clearAuthState();
+
+      throw error;
+
+    } finally {
+      authActionInProgress.current = false;
+    }
+  };
+
+
+  // ======================================
+  // GOOGLE / FACEBOOK REGISTRATION
+  // ======================================
+
+  const socialRegister = async (providerName, role) => {
+    let provider;
+
+    if (providerName === "google") {
+      provider = new GoogleAuthProvider();
+
+    } else if (providerName === "facebook") {
+      provider = new FacebookAuthProvider();
+
+    } else {
+      throw new Error("Unsupported registration provider.");
+    }
+
+    authActionInProgress.current = true;
+
+    let socialUser = null;
+
+    let socialUserIsNew = false;
+
+    let socialProfileCreated = false;
+
+    try {
+      // Open Google / Facebook popup.
+      const result = await signInWithPopup(auth, provider);
+
+      socialUser = result.user;
+
+      socialUserIsNew =
+        getAdditionalUserInfo(result)?.isNewUser === true;
+
+      const userRef = doc(db, "users", result.user.uid);
+
+      const snapshot = await getDoc(userRef);
+
+      // Prevent duplicate registration.
+      if (snapshot.exists()) {
+        throw new Error("ACCOUNT_ALREADY_REGISTERED");
+      }
+
+      // Create profile using social provider information.
+      await createUserProfile(
+        result.user,
+        role
+      );
+
+      socialProfileCreated = true;
+
+      // Sign out until Admin approval.
+      await signOut(auth);
+
+      clearAuthState();
+
+      return result.user;
+
+    } catch (error) {
+      // Remove a new Auth account if its Firestore profile
+      // could not be created.
+
+      if (
+        socialUser &&
+        socialUserIsNew &&
+        !socialProfileCreated &&
+        auth.currentUser?.uid === socialUser.uid
+      ) {
+        try {
+          await deleteUser(socialUser);
+
+        } catch (deleteError) {
+          console.error(
+            "Unable to roll back the incomplete social account:",
+            deleteError
+          );
+
+          if (auth.currentUser) {
+            await signOut(auth);
+          }
+        }
+
+      } else if (auth.currentUser) {
+        try {
+          await signOut(auth);
+
+        } catch (signOutError) {
+          console.error(
+            "Unable to sign out after social registration error:",
+            signOutError
+          );
+        }
+      }
+
+      clearAuthState();
+
+      throw error;
+
+    } finally {
+      authActionInProgress.current = false;
+    }
+  };
+
+
+  // ======================================
+  // GOOGLE / FACEBOOK LOGIN
+  // ======================================
+
+  const socialLogin = async (providerName) => {
+    let provider;
+
+    if (providerName === "google") {
+      provider = new GoogleAuthProvider();
+
+    } else if (providerName === "facebook") {
+      provider = new FacebookAuthProvider();
+
+    } else {
+      throw new Error("Unsupported login provider.");
+    }
+
+    authActionInProgress.current = true;
+
+    try {
+      const result = await signInWithPopup(auth, provider);
+
+      // Check approval before allowing access.
+      const approval = await checkUserApproval(result.user);
+
+      if (!approval.isAdmin) {
+        await recordUserLogin(result.user);
+      }
+
+      const latestSnapshot = await getDoc(
+        doc(db, "users", result.user.uid)
+      );
+
+      const latestProfile = latestSnapshot.exists()
+        ? latestSnapshot.data()
+        : approval.profile;
+
+      setCurrentUser(result.user);
+
+      setUserData(latestProfile || null);
+
+      setIsAdmin(approval.isAdmin);
+
+      return result.user;
+
+    } catch (error) {
+      if (auth.currentUser) {
+        try {
+          await signOut(auth);
+
+        } catch (signOutError) {
+          console.error(
+            "Unable to sign out after social login error:",
+            signOutError
+          );
+        }
+      }
+
+      clearAuthState();
+
+      throw error;
+
+    } finally {
+      authActionInProgress.current = false;
+    }
+  };
+
+
+  // ======================================
+  // LOGOUT
+  // ======================================
+
+  const logout = async () => {
+    authActionInProgress.current = true;
+
+    try {
+      await signOut(auth);
+
+      clearAuthState();
+
+    } finally {
+      authActionInProgress.current = false;
+    }
+  };
+
+
+  // ======================================
+  // AUTHENTICATION STATE LISTENER
+  // ======================================
+
   useEffect(() => {
-
     const unsubscribe = onAuthStateChanged(
       auth,
+
       async (user) => {
+        // The active auth action will update context state
+        // after validating the account.
+        if (authActionInProgress.current) {
+          setLoading(false);
+          return;
+        }
 
         try {
+          if (!user) {
+            clearAuthState();
+            return;
+          }
+
+          // Check Admin custom claim.
+          const token = await getIdTokenResult(
+            user,
+            true
+          );
+
+          const admin = token.claims.admin === true;
+
+          // Load Firestore profile.
+          const userRef = doc(db, "users", user.uid);
+
+          const snapshot = await getDoc(userRef);
+
+          const profile = snapshot.exists()
+            ? snapshot.data()
+            : null;
+
+          // Normal accounts must be approved.
+          if (!admin) {
+            const status = profile?.status || "Pending";
+
+            if (!profile || status !== "Active") {
+              authActionInProgress.current = true;
+
+              try {
+                await signOut(auth);
+
+              } finally {
+                authActionInProgress.current = false;
+              }
+
+              clearAuthState();
+
+              return;
+            }
+          }
 
           setCurrentUser(user);
 
-          if (user) {
+          setUserData(profile);
 
-            const userRef = doc(db, "users", user.uid);
-            const snapshot = await getDoc(userRef);
-
-            if (snapshot.exists()) {
-              setUserData(snapshot.data());
-            } else {
-              setUserData(null);
-            }
-
-            const token = await getIdTokenResult(user, true);
-
-            setIsAdmin(token.claims.admin === true);
-
-          } else {
-
-            setUserData(null);
-            setIsAdmin(false);
-
-          }
+          setIsAdmin(admin);
 
         } catch (error) {
+          console.error(
+            "Authentication state check failed:",
+            error
+          );
 
-          console.error("Authentication error:", error);
+          authActionInProgress.current = true;
 
-          setUserData(null);
-          setIsAdmin(false);
+          try {
+            if (auth.currentUser) {
+              await signOut(auth);
+            }
+
+          } finally {
+            authActionInProgress.current = false;
+          }
+
+          clearAuthState();
 
         } finally {
-
           setLoading(false);
-
         }
       }
     );
@@ -292,12 +680,16 @@ export function AuthProvider({ children }) {
 
   }, []);
 
+
+  // ======================================
+  // AUTH CONTEXT VALUES
+  // ======================================
+
   const value = {
     currentUser,
     userData,
     isAdmin,
     loading,
-
     register,
     login,
     socialRegister,
@@ -311,6 +703,7 @@ export function AuthProvider({ children }) {
     </AuthContext.Provider>
   );
 }
+
 
 // ======================================
 // CUSTOM AUTH HOOK
