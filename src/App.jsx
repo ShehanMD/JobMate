@@ -30,6 +30,7 @@ import Chatbot from "./components/common/Chatbot";
 import { AuthProvider } from "./context/AuthContext";
 import { PublicJobsProvider } from "./context/PublicJobsContext";
 
+
 // Admin Pages
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -45,6 +46,15 @@ import "./App.css";
 
 function AppContent() {
   const location = useLocation();
+
+  // Automatically scroll to top whenever route changes
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "instant",
+    });
+  }, [location.pathname]);
 
   const isAdminPage = location.pathname.startsWith("/admin");
 
@@ -215,20 +225,20 @@ function App() {
   return (
     <>
       <Preloader isLoading={isLoading} />
-      
+
 
       <div className="website-content">
         <BrowserRouter>
-        <PublicJobsProvider>
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
-        </PublicJobsProvider>
-      </BrowserRouter>
-        
+          <PublicJobsProvider>
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
+          </PublicJobsProvider>
+        </BrowserRouter>
+
       </div>
 
-      
+
     </>
   );
 }
