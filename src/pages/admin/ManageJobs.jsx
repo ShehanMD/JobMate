@@ -1,6 +1,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { AnimatePresence, motion } from "motion/react";
 
 import {
   Search,
@@ -22,7 +23,27 @@ import {
 
 import "./ManageJobs.css";
 
-// Normalize district names
+// Animation settings
+const pageAnimation = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      duration: 0.4,
+      staggerChildren: 0.08,
+    },
+  },
+};
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 22 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, ease: "easeOut" },
+  },
+};
+
 const normalizeDistrict = (location) => {
   const value = String(location || "").trim().toLowerCase();
 
@@ -36,18 +57,15 @@ const normalizeDistrict = (location) => {
 function ManageJobs() {
   const navigate = useNavigate();
 
-  // Jobs from Firestore
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
-  // Search and filters
   const [searchTerm, setSearchTerm] = useState("");
   const [locationFilter, setLocationFilter] = useState("All");
   const [typeFilter, setTypeFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
 
-  // Edit modal
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingJobId, setEditingJobId] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -65,13 +83,12 @@ function ManageJobs() {
     status: "Active",
   });
 
-  // ------------------------------------------------
-  // 1. Listen to Firestore jobs
-  // ------------------------------------------------
+  // ========================================
+  // FIRESTORE SUBSCRIPTION
+  // ========================================
 
   useEffect(() => {
     setLoading(true);
-    setLoadError("");
 
     const unsubscribe = subscribeToAllJobs(
       (fetchedJobs) => {
@@ -81,22 +98,17 @@ function ManageJobs() {
       },
       (error) => {
         console.error("Unable to load jobs:", error);
-
-        setLoadError(
-          "Unable to load jobs. Please check your Firebase permissions."
-        );
-
+        setLoadError("Unable to load jobs. Please check Firebase permissions.");
         setLoading(false);
       }
     );
 
-    // Stop listening when component unmounts
     return () => unsubscribe();
   }, []);
 
-  // ------------------------------------------------
-  // 2. Edit job
-  // ------------------------------------------------
+  // ========================================
+  // EDIT JOB
+  // ========================================
 
   const handleEdit = (job) => {
     setEditingJobId(job.id);
@@ -120,17 +132,15 @@ function ManageJobs() {
     setIsEditModalOpen(true);
   };
 
-  // Handle edit form changes
   const handleEditChange = (e) => {
     const { name, value } = e.target;
 
-    setEditForm((previousForm) => ({
-      ...previousForm,
+    setEditForm((previous) => ({
+      ...previous,
       [name]: value,
     }));
   };
 
-  // Save updated job to Firestore
   const handleUpdateJob = async (e) => {
     e.preventDefault();
 
@@ -152,7 +162,7 @@ function ManageJobs() {
     try {
       setSaving(true);
 
-      const updatedData = {
+      await updateJob(editingJobId, {
         ...editForm,
         title: editForm.title.trim(),
         company: editForm.company.trim(),
@@ -160,9 +170,7 @@ function ManageJobs() {
         description: editForm.description.trim(),
         requirements: editForm.requirements.trim(),
         deadline: editForm.deadline || null,
-      };
-
-      await updateJob(editingJobId, updatedData);
+      });
 
       setIsEditModalOpen(false);
       setEditingJobId(null);
@@ -176,9 +184,9 @@ function ManageJobs() {
     }
   };
 
-  // ------------------------------------------------
-  // 3. Delete job from Firestore
-  // ------------------------------------------------
+  // ========================================
+  // DELETE JOB
+  // ========================================
 
   const handleDelete = async (id) => {
     const confirmDelete = window.confirm(
@@ -189,7 +197,6 @@ function ManageJobs() {
 
     try {
       await deleteJob(id);
-
       alert("Job deleted successfully!");
     } catch (error) {
       console.error("Unable to delete job:", error);
@@ -197,9 +204,9 @@ function ManageJobs() {
     }
   };
 
-  // ------------------------------------------------
-  // 4. Reset filters
-  // ------------------------------------------------
+  // ========================================
+  // RESET FILTERS
+  // ========================================
 
   const handleResetFilters = () => {
     setSearchTerm("");
@@ -208,9 +215,9 @@ function ManageJobs() {
     setStatusFilter("All");
   };
 
-  // ------------------------------------------------
-  // 5. Filter jobs
-  // ------------------------------------------------
+  // ========================================
+  // FILTER JOBS
+  // ========================================
 
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
@@ -242,17 +249,11 @@ function ManageJobs() {
         matchesStatus
       );
     });
-  }, [
-    jobs,
-    searchTerm,
-    locationFilter,
-    typeFilter,
-    statusFilter,
-  ]);
+  }, [jobs, searchTerm, locationFilter, typeFilter, statusFilter]);
 
-  // ------------------------------------------------
-  // 6. Job statistics
-  // ------------------------------------------------
+  // ========================================
+  // STATISTICS
+  // ========================================
 
   const totalJobs = jobs.length;
 
@@ -272,70 +273,105 @@ function ManageJobs() {
     (job) => getJobDisplayStatus(job) === "Expired"
   ).length;
 
-  // ------------------------------------------------
-  // 7. Render
-  // ------------------------------------------------
+  const statistics = [
+    { title: "Total Jobs", value: totalJobs },
+    { title: "Active Jobs", value: activeJobs },
+    { title: "Inactive Jobs", value: inactiveJobs },
+    { title: "Draft Jobs", value: draftJobs },
+    { title: "Expired Jobs", value: expiredJobs },
+  ];
+
+  // ========================================
+  // CLOSE MODAL
+  // ========================================
+
+  const closeEditModal = () => {
+    if (saving) return;
+
+    setIsEditModalOpen(false);
+    setEditingJobId(null);
+  };
+
+  // ========================================
+  // RENDER
+  // ========================================
 
   return (
-    <div className="manage-jobs-page">
+    <motion.div
+      className="manage-jobs-page"
+      variants={pageAnimation}
+      initial="hidden"
+      animate="visible"
+    >
 
-      {/* Page Header */}
-      <div className="manage-jobs-header">
+      {/* PAGE HEADER */}
+      <motion.div
+        className="manage-jobs-header"
+        variants={fadeUp}
+      >
         <div>
           <h1>Manage Jobs</h1>
           <p>View, manage and monitor job listings.</p>
         </div>
 
-        <button
+        <motion.button
           className="create-job-btn"
           onClick={() => navigate("/admin/create-job")}
+          whileHover={{ scale: 1.04, y: -3 }}
+          whileTap={{ scale: 0.96 }}
         >
           <Plus size={18} />
           Create Job
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
-      {/* Statistics */}
-      <div className="manage-jobs-stats">
+      {/* STATISTICS */}
+      <motion.div
+        className="manage-jobs-stats"
+        variants={fadeUp}
+      >
+        {statistics.map((stat, index) => (
+          <motion.div
+            className="manage-jobs-stat-card"
+            key={stat.title}
+            initial={{ opacity: 0, y: 25, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{
+              duration: 0.4,
+              delay: 0.1 + index * 0.08,
+              ease: "easeOut",
+            }}
+            whileHover={{
+              y: -6,
+              transition: { duration: 0.2 },
+            }}
+          >
+            <h3>{stat.title}</h3>
+            <motion.strong
+              key={stat.value}
+              initial={{ opacity: 0.5, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              {stat.value}
+            </motion.strong>
+          </motion.div>
+        ))}
+      </motion.div>
 
-        <div className="manage-jobs-stat-card">
-          <h3>Total Jobs</h3>
-          <strong>{totalJobs}</strong>
-        </div>
-
-        <div className="manage-jobs-stat-card">
-          <h3>Active Jobs</h3>
-          <strong>{activeJobs}</strong>
-        </div>
-
-        <div className="manage-jobs-stat-card">
-          <h3>Inactive Jobs</h3>
-          <strong>{inactiveJobs}</strong>
-        </div>
-
-        <div className="manage-jobs-stat-card">
-          <h3>Draft Jobs</h3>
-          <strong>{draftJobs}</strong>
-        </div>
-
-        <div className="manage-jobs-stat-card">
-          <h3>Expired Jobs</h3>
-          <strong>{expiredJobs}</strong>
-        </div>
-
-      </div>
-
-      {/* Jobs Table */}
-      <div className="manage-jobs-table-card">
+      {/* JOB TABLE CARD */}
+      <motion.div
+        className="manage-jobs-table-card"
+        variants={fadeUp}
+      >
 
         <div className="manage-jobs-table-header">
-
           <div>
             <h2>Job Listings</h2>
             <p>Manage all posted jobs from here.</p>
           </div>
 
-          {/* Search and Filters */}
+          {/* SEARCH AND FILTERS */}
           <div className="manage-jobs-controls">
 
             <div className="manage-jobs-search">
@@ -381,18 +417,20 @@ function ManageJobs() {
               <option value="Expired">Expired</option>
             </select>
 
-            <button
+            <motion.button
               type="button"
               className="reset-filters-btn"
               onClick={handleResetFilters}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
               Reset
-            </button>
+            </motion.button>
 
           </div>
         </div>
 
-        {/* Table */}
+        {/* JOBS TABLE */}
         <div className="manage-jobs-table-wrapper">
 
           <table className="manage-jobs-table">
@@ -411,303 +449,327 @@ function ManageJobs() {
             <tbody>
 
               {loading ? (
-
                 <tr>
                   <td colSpan="6" className="no-jobs-found">
                     Loading jobs...
                   </td>
                 </tr>
-
               ) : loadError ? (
-
                 <tr>
                   <td colSpan="6" className="no-jobs-found">
                     {loadError}
                   </td>
                 </tr>
-
-              ) : filteredJobs.length > 0 ? (
-
-                filteredJobs.map((job) => {
-                  const displayStatus = getJobDisplayStatus(job);
-
-                  return (
-                    <tr key={job.id}>
-
-                      <td>{job.title || "Untitled Job"}</td>
-
-                      <td>{job.company || "Not specified"}</td>
-
-                      <td>
-                        {normalizeDistrict(job.location) === "gampaha"
-                          ? "Gampaha"
-                          : job.location || "Not specified"}
-                      </td>
-
-                      <td>{job.type || "Not specified"}</td>
-
-                      <td>
-                        <span
-                          className={`job-status-badge ${displayStatus.toLowerCase()}`}
-                        >
-                          {displayStatus}
-                        </span>
-                      </td>
-
-                      <td>
-                        <div className="job-action-buttons">
-
-                          <button
-                            type="button"
-                            className="view-job-btn"
-                            title="View Job"
-                            onClick={() =>
-                              navigate(`/admin/jobs/${job.id}`)
-                            }
-                          >
-                            <Eye size={17} />
-                          </button>
-
-                          <button
-                            type="button"
-                            className="edit-job-btn"
-                            title="Edit Job"
-                            onClick={() => handleEdit(job)}
-                          >
-                            <Pencil size={17} />
-                          </button>
-
-                          <button
-                            type="button"
-                            className="delete-job-btn"
-                            title="Delete Job"
-                            onClick={() => handleDelete(job.id)}
-                          >
-                            <Trash2 size={17} />
-                          </button>
-
-                        </div>
-                      </td>
-
-                    </tr>
-                  );
-                })
-
               ) : (
+                <AnimatePresence initial={false}>
+                  {filteredJobs.length > 0 ? (
+                    filteredJobs.map((job, index) => {
+                      const displayStatus = getJobDisplayStatus(job);
 
-                <tr>
-                  <td colSpan="6" className="no-jobs-found">
-                    No jobs found.
-                  </td>
-                </tr>
+                      return (
+                        <motion.tr
+                          key={job.id}
+                          initial={{ opacity: 0, y: 12 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, x: -15 }}
+                          transition={{
+                            duration: 0.25,
+                            delay: Math.min(index * 0.035, 0.2),
+                          }}
+                        >
+                          <td>{job.title || "Untitled Job"}</td>
 
+                          <td>{job.company || "Not specified"}</td>
+
+                          <td>
+                            {normalizeDistrict(job.location) === "gampaha"
+                              ? "Gampaha"
+                              : job.location || "Not specified"}
+                          </td>
+
+                          <td>{job.type || "Not specified"}</td>
+
+                          <td>
+                            <span
+                              className={`job-status-badge ${displayStatus.toLowerCase()}`}
+                            >
+                              {displayStatus}
+                            </span>
+                          </td>
+
+                          <td>
+                            <div className="job-action-buttons">
+
+                              <motion.button
+                                type="button"
+                                className="view-job-btn"
+                                title="View Job"
+                                onClick={() =>
+                                  navigate(`/admin/jobs/${job.id}`)
+                                }
+                                whileHover={{ scale: 1.12 }}
+                                whileTap={{ scale: 0.9 }}
+                              >
+                                <Eye size={17} />
+                              </motion.button>
+
+                              <motion.button
+                                type="button"
+                                className="edit-job-btn"
+                                title="Edit Job"
+                                onClick={() => handleEdit(job)}
+                                whileHover={{ scale: 1.12 }}
+                                whileTap={{ scale: 0.9 }}
+                              >
+                                <Pencil size={17} />
+                              </motion.button>
+
+                              <motion.button
+                                type="button"
+                                className="delete-job-btn"
+                                title="Delete Job"
+                                onClick={() => handleDelete(job.id)}
+                                whileHover={{ scale: 1.12 }}
+                                whileTap={{ scale: 0.9 }}
+                              >
+                                <Trash2 size={17} />
+                              </motion.button>
+
+                            </div>
+                          </td>
+                        </motion.tr>
+                      );
+                    })
+                  ) : (
+                    <motion.tr
+                      key="empty"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      <td colSpan="6" className="no-jobs-found">
+                        No jobs found.
+                      </td>
+                    </motion.tr>
+                  )}
+                </AnimatePresence>
               )}
 
             </tbody>
           </table>
         </div>
 
-        {/* Results */}
-        <div className="manage-jobs-results">
+        <motion.div
+          className="manage-jobs-results"
+          key={`${filteredJobs.length}-${jobs.length}`}
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25 }}
+        >
           Showing {filteredJobs.length} of {jobs.length} jobs
-        </div>
+        </motion.div>
 
-      </div>
+      </motion.div>
 
-      {/* Edit Job Modal */}
-      {isEditModalOpen && (
+      {/* EDIT MODAL */}
+      <AnimatePresence>
+        {isEditModalOpen && (
+          <motion.div
+            className="job-modal-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={closeEditModal}
+          >
+            <motion.div
+              className="job-edit-modal"
+              initial={{ opacity: 0, scale: 0.94, y: 25 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 15 }}
+              transition={{
+                type: "spring",
+                stiffness: 260,
+                damping: 24,
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
 
-        <div className="job-modal-overlay">
+              <div className="job-modal-header">
+                <div>
+                  <h2>Edit Job</h2>
+                  <p>Update job listing details.</p>
+                </div>
 
-          <div className="job-edit-modal">
-
-            <div className="job-modal-header">
-              <div>
-                <h2>Edit Job</h2>
-                <p>Update job listing details.</p>
-              </div>
-
-              <button
-                type="button"
-                className="close-job-modal-btn"
-                onClick={() => {
-                  setIsEditModalOpen(false);
-                  setEditingJobId(null);
-                }}
-                disabled={saving}
-              >
-                <X size={21} />
-              </button>
-            </div>
-
-            <form onSubmit={handleUpdateJob}>
-
-              <div className="edit-job-field">
-                <label>Job Title *</label>
-
-                <input
-                  type="text"
-                  name="title"
-                  value={editForm.title}
-                  onChange={handleEditChange}
-                  required
-                />
-              </div>
-
-              <div className="edit-job-field">
-                <label>Company *</label>
-
-                <input
-                  type="text"
-                  name="company"
-                  value={editForm.company}
-                  onChange={handleEditChange}
-                  required
-                />
-              </div>
-
-              <div className="edit-job-field">
-                <label>Location / District *</label>
-
-                <DistrictDropdown
-                  name="location"
-                  value={editForm.location}
-                  onChange={handleEditChange}
-                  required
-                  placeholder="Select District"
-                />
-              </div>
-
-              <div className="edit-job-field">
-                <label>Job Type *</label>
-
-                <select
-                  name="type"
-                  value={editForm.type}
-                  onChange={handleEditChange}
-                  required
-                >
-                  <option value="">Select Job Type</option>
-                  <option value="Full-time">Full-time</option>
-                  <option value="Part-time">Part-time</option>
-                  <option value="Contract">Contract</option>
-                  <option value="Internship">Internship</option>
-                  <option value="Freelance">Freelance</option>
-                  <option value="Remote">Remote</option>
-                </select>
-              </div>
-
-              <div className="edit-job-field">
-                <label>Salary *</label>
-
-                <input
-                  type="text"
-                  name="salary"
-                  value={editForm.salary}
-                  onChange={handleEditChange}
-                  required
-                />
-              </div>
-
-              <div className="edit-job-field">
-                <label>Category *</label>
-
-                <select
-                  name="category"
-                  value={editForm.category}
-                  onChange={handleEditChange}
-                  required
-                >
-                  <option value="">Select Category</option>
-                  <option value="IT & Software">IT & Software</option>
-                  <option value="Finance">Finance</option>
-                  <option value="Marketing">Marketing</option>
-                  <option value="Sales">Sales</option>
-                  <option value="Design">Design</option>
-                  <option value="Customer Service">Customer Service</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-
-              <div className="edit-job-field">
-                <label>Application Deadline</label>
-
-                <input
-                  type="date"
-                  name="deadline"
-                  value={editForm.deadline}
-                  onChange={handleEditChange}
-                />
-              </div>
-
-              <div className="edit-job-field">
-                <label>Status</label>
-
-                <select
-                  name="status"
-                  value={editForm.status}
-                  onChange={handleEditChange}
-                >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                  <option value="Draft">Draft</option>
-                  <option value="Expired">Expired</option>
-                </select>
-              </div>
-
-              <div className="edit-job-field">
-                <label>Job Description *</label>
-
-                <textarea
-                  name="description"
-                  rows="4"
-                  value={editForm.description}
-                  onChange={handleEditChange}
-                  required
-                />
-              </div>
-
-              <div className="edit-job-field">
-                <label>Requirements</label>
-
-                <textarea
-                  name="requirements"
-                  rows="4"
-                  value={editForm.requirements}
-                  onChange={handleEditChange}
-                />
-              </div>
-
-              <div className="job-modal-actions">
-
-                <button
+                <motion.button
                   type="button"
-                  className="cancel-job-btn"
-                  onClick={() => {
-                    setIsEditModalOpen(false);
-                    setEditingJobId(null);
-                  }}
+                  className="close-job-modal-btn"
+                  onClick={closeEditModal}
                   disabled={saving}
+                  whileHover={{ rotate: 90, scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
                 >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  className="save-job-btn"
-                  disabled={saving}
-                >
-                  {saving ? "Saving..." : "Save Changes"}
-                </button>
-
+                  <X size={21} />
+                </motion.button>
               </div>
 
-            </form>
-          </div>
-        </div>
-      )}
+              <form onSubmit={handleUpdateJob}>
 
-    </div>
+                <div className="edit-job-field">
+                  <label>Job Title *</label>
+                  <input
+                    type="text"
+                    name="title"
+                    value={editForm.title}
+                    onChange={handleEditChange}
+                    required
+                  />
+                </div>
+
+                <div className="edit-job-field">
+                  <label>Company *</label>
+                  <input
+                    type="text"
+                    name="company"
+                    value={editForm.company}
+                    onChange={handleEditChange}
+                    required
+                  />
+                </div>
+
+                <div className="edit-job-field">
+                  <label>Location / District *</label>
+                  <DistrictDropdown
+                    name="location"
+                    value={editForm.location}
+                    onChange={handleEditChange}
+                    required
+                    placeholder="Select District"
+                  />
+                </div>
+
+                <div className="edit-job-field">
+                  <label>Job Type *</label>
+                  <select
+                    name="type"
+                    value={editForm.type}
+                    onChange={handleEditChange}
+                    required
+                  >
+                    <option value="">Select Job Type</option>
+                    <option value="Full-time">Full-time</option>
+                    <option value="Part-time">Part-time</option>
+                    <option value="Contract">Contract</option>
+                    <option value="Internship">Internship</option>
+                    <option value="Freelance">Freelance</option>
+                    <option value="Remote">Remote</option>
+                  </select>
+                </div>
+
+                <div className="edit-job-field">
+                  <label>Salary *</label>
+                  <input
+                    type="text"
+                    name="salary"
+                    value={editForm.salary}
+                    onChange={handleEditChange}
+                    required
+                  />
+                </div>
+
+                <div className="edit-job-field">
+                  <label>Category *</label>
+                  <select
+                    name="category"
+                    value={editForm.category}
+                    onChange={handleEditChange}
+                    required
+                  >
+                    <option value="">Select Category</option>
+                    <option value="IT & Software">IT & Software</option>
+                    <option value="Finance">Finance</option>
+                    <option value="Marketing">Marketing</option>
+                    <option value="Sales">Sales</option>
+                    <option value="Design">Design</option>
+                    <option value="Customer Service">Customer Service</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div className="edit-job-field">
+                  <label>Application Deadline</label>
+                  <input
+                    type="date"
+                    name="deadline"
+                    value={editForm.deadline}
+                    onChange={handleEditChange}
+                  />
+                </div>
+
+                <div className="edit-job-field">
+                  <label>Status</label>
+                  <select
+                    name="status"
+                    value={editForm.status}
+                    onChange={handleEditChange}
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="Draft">Draft</option>
+                  </select>
+                </div>
+
+                <div className="edit-job-field">
+                  <label>Job Description *</label>
+                  <textarea
+                    name="description"
+                    rows="4"
+                    value={editForm.description}
+                    onChange={handleEditChange}
+                    required
+                  />
+                </div>
+
+                <div className="edit-job-field">
+                  <label>Requirements</label>
+                  <textarea
+                    name="requirements"
+                    rows="4"
+                    value={editForm.requirements}
+                    onChange={handleEditChange}
+                  />
+                </div>
+
+                <div className="job-modal-actions">
+                  <motion.button
+                    type="button"
+                    className="cancel-job-btn"
+                    onClick={closeEditModal}
+                    disabled={saving}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.96 }}
+                  >
+                    Cancel
+                  </motion.button>
+
+                  <motion.button
+                    type="submit"
+                    className="save-job-btn"
+                    disabled={saving}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.96 }}
+                  >
+                    {saving ? "Saving..." : "Save Changes"}
+                  </motion.button>
+                </div>
+
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+    </motion.div>
   );
 }
 

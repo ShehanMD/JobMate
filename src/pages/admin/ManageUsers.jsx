@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState } from "react";
+
 import {
   Search,
   Pencil,
@@ -16,116 +17,269 @@ import {
   UserRound,
 } from "lucide-react";
 
+import {
+  collection,
+  onSnapshot,
+  query,
+  where,
+  doc,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp,
+  orderBy,
+  getDocs,
+  writeBatch,
+} from "firebase/firestore";
+
+import { db } from "../../firebase/firebase";
+
 import DistrictDropdown from "../../components/common/DistrictDropdown";
+
 import "./ManageUsers.css";
 
-const demoUsers = [
-  {
-    id: 1,
-    name: "Kavindu Perera",
-    email: "kavindu@gmail.com",
-    phone: "0771234567",
-    location: "Colombo",
-    joinedDate: "2026-11-10",
-    status: "Active",
-    totalActiveDays: 8,
-    totalLogins: 15,
-    lastActive: "2026-11-23",
-    activityHistory: [
-      { id: 1, action: "Logged into the platform", date: "2026-11-23", time: "09:30 AM" },
-      { id: 2, action: "Updated profile information", date: "2026-11-22", time: "02:15 PM" },
-      { id: 3, action: "Browsed job listings", date: "2026-11-21", time: "10:45 AM" },
-    ],
-  },
-  {
-    id: 2,
-    name: "Nethmi Silva",
-    email: "nethmi@gmail.com",
-    phone: "0712345678",
-    location: "Gampaha",
-    joinedDate: "2026-11-12",
-    status: "Active",
-    totalActiveDays: 6,
-    totalLogins: 11,
-    lastActive: "2026-11-23",
-    activityHistory: [
-      { id: 1, action: "Logged into the platform", date: "2026-11-23", time: "11:20 AM" },
-      { id: 2, action: "Viewed a job listing", date: "2026-11-22", time: "04:10 PM" },
-    ],
-  },
-  {
-    id: 3,
-    name: "Tharushi Fernando",
-    email: "tharushi@gmail.com",
-    phone: "0751234567",
-    location: "Kandy",
-    joinedDate: "2026-11-15",
-    status: "Inactive",
-    totalActiveDays: 2,
-    totalLogins: 4,
-    lastActive: "2026-11-18",
-    activityHistory: [
-      { id: 1, action: "Logged into the platform", date: "2026-11-18", time: "08:30 AM" },
-      { id: 2, action: "Created a job seeker profile", date: "2026-11-15", time: "01:15 PM" },
-    ],
-  },
-  {
-    id: 4,
-    name: "Dasun Jayawardena",
-    email: "dasun@gmail.com",
-    phone: "0761234567",
-    location: "Kalutara",
-    joinedDate: "2026-11-18",
-    status: "Active",
-    totalActiveDays: 4,
-    totalLogins: 9,
-    lastActive: "2026-11-23",
-    activityHistory: [
-      { id: 1, action: "Logged into the platform", date: "2026-11-23", time: "03:00 PM" },
-      { id: 2, action: "Browsed job listings", date: "2026-11-20", time: "09:45 AM" },
-    ],
-  },
-];
+// ======================================
+// INITIAL FORM
+// ======================================
 
-function ManageUsers() {
-  // Load Job Seekers from localStorage
-  const [users, setUsers] = useState(() => {
-    try {
-      const savedUsers = localStorage.getItem("jobmate_users");
+const initialEditForm = {
+  name: "",
+  email: "",
+  phone: "",
+  location: "",
+  status: "Active",
+};
 
-      if (savedUsers !== null) {
-        const parsedUsers = JSON.parse(savedUsers);
-        return Array.isArray(parsedUsers) ? parsedUsers : demoUsers;
-      }
+// ======================================
+// HELPER FUNCTIONS
+// ======================================
 
-      return demoUsers;
-    } catch {
-      return demoUsers;
+// Convert Firestore Timestamp to JavaScript Date
+const toDate = (value) => {
+  if (!value) return null;
+
+  if (typeof value.toDate === "function") {
+    return value.toDate();
+  }
+
+  const date = value instanceof Date
+    ? value
+    : new Date(value);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+// Format date
+const formatDate = (value) => {
+  const date = toDate(value);
+
+  if (!date) return "Not available";
+
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+// Format date and time
+const formatDateTime = (value) => {
+  const date = toDate(value);
+
+  if (!date) return "Not available";
+
+  return (
+    date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }) +
+    " · " +
+    date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  );
+};
+
+// Display fallback value
+const displayValue = (value) => {
+  return value || "Not provided";
+};
+
+// Default status for older accounts
+const getUserStatus = (user) => {
+  return user.status || "Active";
+};
+
+// Calculate unique active days from activity records
+const getActiveDays = (activities) => {
+  const activeDates = new Set();
+
+  activities.forEach((activity) => {
+    const date = toDate(activity.createdAt);
+
+    if (date) {
+      const dateKey = [
+        date.getFullYear(),
+        date.getMonth() + 1,
+        date.getDate(),
+      ].join("-");
+
+      activeDates.add(dateKey);
     }
   });
 
-  // Save users
-  useEffect(() => {
-    localStorage.setItem("jobmate_users", JSON.stringify(users));
-  }, [users]);
+  return activeDates.size;
+};
+
+// ======================================
+// MANAGE USERS COMPONENT
+// ======================================
+
+function ManageUsers() {
+
+  // ======================================
+  // STATES
+  // ======================================
+
+  const [users, setUsers] = useState([]);
+
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [usersError, setUsersError] = useState("");
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [locationFilter, setLocationFilter] = useState("All");
 
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [editingUser, setEditingUser] = useState(null);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [editingUserId, setEditingUserId] = useState(null);
 
-  const [editForm, setEditForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    location: "",
-    status: "Active",
-  });
+  const [activities, setActivities] = useState([]);
+  const [loadingActivities, setLoadingActivities] = useState(false);
+  const [activityError, setActivityError] = useState("");
 
-  // Filter Job Seekers
+  const [editForm, setEditForm] = useState(initialEditForm);
+
+  // Get selected user from current Firestore data
+  const selectedUser =
+    users.find((user) => user.id === selectedUserId) || null;
+
+  // ======================================
+  // LOAD JOB SEEKERS FROM FIRESTORE
+  // ======================================
+
+  useEffect(() => {
+
+    const usersRef = collection(db, "users");
+
+    // Only Job Seekers
+    const usersQuery = query(
+      usersRef,
+      where("role", "==", "user")
+    );
+
+    const unsubscribe = onSnapshot(
+      usersQuery,
+
+      (snapshot) => {
+
+        const usersList = snapshot.docs.map((document) => ({
+          id: document.id,
+          ...document.data(),
+        }));
+
+        // Sort newest registrations first
+        usersList.sort((a, b) => {
+
+          const dateA = toDate(a.createdAt)?.getTime() || 0;
+          const dateB = toDate(b.createdAt)?.getTime() || 0;
+
+          return dateB - dateA;
+        });
+
+        setUsers(usersList);
+        setLoadingUsers(false);
+        setUsersError("");
+      },
+
+      (error) => {
+
+        console.error("Error loading Job Seekers:", error);
+
+        setUsersError(
+          "Unable to load Job Seekers. Please check your permissions."
+        );
+
+        setLoadingUsers(false);
+      }
+    );
+
+    return () => unsubscribe();
+
+  }, []);
+
+  // ======================================
+  // LOAD SELECTED USER ACTIVITY
+  // ======================================
+
+  useEffect(() => {
+
+    if (!selectedUserId) {
+      setActivities([]);
+      setLoadingActivities(false);
+      setActivityError("");
+      return;
+    }
+
+    setLoadingActivities(true);
+    setActivityError("");
+
+    const activityRef = collection(
+      db,
+      "users",
+      selectedUserId,
+      "activity"
+    );
+
+    const activityQuery = query(
+      activityRef,
+      orderBy("createdAt", "desc")
+    );
+
+    const unsubscribe = onSnapshot(
+      activityQuery,
+
+      (snapshot) => {
+
+        const activityList = snapshot.docs.map((document) => ({
+          id: document.id,
+          ...document.data(),
+        }));
+
+        setActivities(activityList);
+        setLoadingActivities(false);
+        setActivityError("");
+      },
+
+      (error) => {
+
+        console.error("Error loading user activity:", error);
+
+        setActivityError("Unable to load activity history.");
+        setLoadingActivities(false);
+      }
+    );
+
+    return () => unsubscribe();
+
+  }, [selectedUserId]);
+
+  // ======================================
+  // FILTER JOB SEEKERS
+  // ======================================
+
   const filteredUsers = users.filter((user) => {
+
     const search = searchTerm.trim().toLowerCase();
 
     const matchesSearch =
@@ -134,7 +288,8 @@ function ManageUsers() {
       String(user.phone || "").toLowerCase().includes(search);
 
     const matchesStatus =
-      statusFilter === "All" || user.status === statusFilter;
+      statusFilter === "All" ||
+      getUserStatus(user) === statusFilter;
 
     const matchesLocation =
       locationFilter === "All" ||
@@ -144,61 +299,83 @@ function ManageUsers() {
     return matchesSearch && matchesStatus && matchesLocation;
   });
 
-  // Statistics
+  // ======================================
+  // STATISTICS
+  // ======================================
+
   const totalUsers = users.length;
 
   const activeUsers = users.filter(
-    (user) => user.status === "Active"
+    (user) => getUserStatus(user) === "Active"
   ).length;
 
   const inactiveUsers = users.filter(
-    (user) => user.status === "Inactive"
+    (user) => getUserStatus(user) === "Inactive"
   ).length;
 
-  // Delete Job Seeker
-  const handleDelete = (id) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this Job Seeker?"
-    );
+  // ======================================
+  // RESET FILTERS
+  // ======================================
 
-    if (!confirmDelete) return;
+  const handleResetFilters = () => {
 
-    setUsers((previousUsers) =>
-      previousUsers.filter((user) => user.id !== id)
-    );
+    setSearchTerm("");
+    setStatusFilter("All");
+    setLocationFilter("All");
 
-    if (selectedUser?.id === id) {
-      setSelectedUser(null);
-    }
   };
 
-  // Open Edit Modal
+  // ======================================
+  // VIEW USER PROFILE
+  // ======================================
+
+  const handleViewUser = (user) => {
+
+    setEditingUserId(null);
+    setSelectedUserId(user.id);
+
+  };
+
+  // ======================================
+  // OPEN EDIT MODAL
+  // ======================================
+
   const handleEdit = (user) => {
-    setEditingUser(user);
 
     setEditForm({
       name: user.name || "",
       email: user.email || "",
       phone: user.phone || "",
       location: user.location || "",
-      status: user.status || "Active",
+      status: getUserStatus(user),
     });
 
-    setSelectedUser(null);
+    setSelectedUserId(null);
+    setEditingUserId(user.id);
+
   };
 
-  // Handle Edit Inputs
+  // ======================================
+  // HANDLE EDIT INPUTS
+  // ======================================
+
   const handleEditChange = (e) => {
+
     const { name, value } = e.target;
 
     setEditForm((previousForm) => ({
       ...previousForm,
       [name]: value,
     }));
+
   };
 
-  // Save User Details
-  const handleSaveEdit = (e) => {
+  // ======================================
+  // SAVE USER DETAILS
+  // ======================================
+
+  const handleSaveEdit = async (e) => {
+
     e.preventDefault();
 
     if (
@@ -210,91 +387,216 @@ function ManageUsers() {
       return;
     }
 
-    const updatedUsers = users.map((user) =>
-      user.id === editingUser.id
-        ? { ...user, ...editForm }
-        : user
-    );
+    try {
 
-    setUsers(updatedUsers);
-    setEditingUser(null);
-  };
+      const userRef = doc(
+        db,
+        "users",
+        editingUserId
+      );
 
-  const handleCloseEdit = () => {
-    setEditingUser(null);
-  };
+      // Update Firestore document
+      await updateDoc(userRef, {
 
-  const handleResetFilters = () => {
-    setSearchTerm("");
-    setStatusFilter("All");
-    setLocationFilter("All");
-  };
+        name: editForm.name.trim(),
 
-  const formatDate = (date) => {
-    if (!date) return "Not available";
+        phone: editForm.phone.trim(),
 
-    const parsedDate = new Date(date);
+        location: editForm.location,
 
-    if (Number.isNaN(parsedDate.getTime())) {
-      return date;
+        status: editForm.status,
+
+        updatedAt: serverTimestamp(),
+
+      });
+
+      setEditingUserId(null);
+      setEditForm(initialEditForm);
+
+      alert("Job Seeker updated successfully!");
+
+    } catch (error) {
+
+      console.error("Error updating Job Seeker:", error);
+
+      alert("Unable to update Job Seeker. Please try again.");
+
     }
 
-    return parsedDate.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
   };
 
-  const displayValue = (value) => {
-    return value || "Not provided";
+  // ======================================
+  // CLOSE EDIT MODAL
+  // ======================================
+
+  const handleCloseEdit = () => {
+
+    setEditingUserId(null);
+    setEditForm(initialEditForm);
+
   };
+
+  // ======================================
+  // CLOSE PROFILE MODAL
+  // ======================================
+
+  const handleCloseProfile = () => {
+
+    setSelectedUserId(null);
+
+  };
+
+  // ======================================
+  // DELETE USER PROFILE AND ACTIVITY
+  // ======================================
+
+  const handleDelete = async (user) => {
+
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete the Firestore profile of ${user.name || "this Job Seeker"}? Their activity records will also be deleted. This will NOT delete their Firebase Authentication account.`
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+
+      const userRef = doc(
+        db,
+        "users",
+        user.id
+      );
+
+      const activityRef = collection(
+        db,
+        "users",
+        user.id,
+        "activity"
+      );
+
+      // Get existing activity records
+      const activitySnapshot = await getDocs(activityRef);
+
+      // Delete in batches to avoid the 500-operation limit
+      const activityDocs = activitySnapshot.docs;
+
+      for (let i = 0; i < activityDocs.length; i += 450) {
+
+        const batch = writeBatch(db);
+
+        activityDocs
+          .slice(i, i + 450)
+          .forEach((activityDoc) => {
+            batch.delete(activityDoc.ref);
+          });
+
+        await batch.commit();
+      }
+
+      // Delete the main Firestore user document
+      await deleteDoc(userRef);
+
+      if (selectedUserId === user.id) {
+        setSelectedUserId(null);
+      }
+
+      if (editingUserId === user.id) {
+        setEditingUserId(null);
+      }
+
+      alert("Firestore user profile deleted successfully!");
+
+    } catch (error) {
+
+      console.error("Error deleting Job Seeker:", error);
+
+      alert("Unable to delete Job Seeker. Please try again.");
+
+    }
+
+  };
+
+  // ======================================
+  // RENDER
+  // ======================================
 
   return (
+
     <div className="manage-users-page">
 
-      {/* Page Header */}
+      {/* ============================== */}
+      {/* PAGE HEADER */}
+      {/* ============================== */}
+
       <div className="manage-users-header">
+
         <div>
           <h1>Manage Users</h1>
-          <p>View and manage registered Job Seekers.</p>
+
+          <p>
+            View and manage registered Job Seekers.
+          </p>
         </div>
+
       </div>
 
-      {/* Statistics */}
+      {/* ============================== */}
+      {/* STATISTICS */}
+      {/* ============================== */}
+
       <div className="manage-users-stats">
 
         <div className="manage-users-stat-card">
+
           <h3>Total Job Seekers</h3>
+
           <p>{totalUsers}</p>
+
         </div>
 
         <div className="manage-users-stat-card">
+
           <h3>Active Job Seekers</h3>
+
           <p>{activeUsers}</p>
+
         </div>
 
         <div className="manage-users-stat-card">
+
           <h3>Inactive Job Seekers</h3>
+
           <p>{inactiveUsers}</p>
+
         </div>
 
       </div>
 
-      {/* Job Seekers Table */}
+      {/* ============================== */}
+      {/* USERS TABLE CARD */}
+      {/* ============================== */}
+
       <div className="manage-users-table-card">
+
+        {/* TABLE HEADER */}
 
         <div className="manage-users-table-header">
 
           <div className="manage-users-table-title">
+
             <h2>Registered Job Seekers</h2>
-            <p>View and manage all registered Job Seeker profiles.</p>
+
+            <p>
+              View and manage all registered Job Seeker profiles.
+            </p>
+
           </div>
 
-          {/* Search and Filters */}
+          {/* SEARCH AND FILTERS */}
+
           <div className="manage-users-controls">
 
             <div className="manage-users-search-box">
+
               <Search size={18} />
 
               <input
@@ -303,10 +605,15 @@ function ManageUsers() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
+
             </div>
 
             <DistrictDropdown
-              value={locationFilter === "All" ? "" : locationFilter}
+              value={
+                locationFilter === "All"
+                  ? ""
+                  : locationFilter
+              }
               onChange={(e) =>
                 setLocationFilter(e.target.value || "All")
               }
@@ -315,11 +622,17 @@ function ManageUsers() {
 
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) =>
+                setStatusFilter(e.target.value)
+              }
             >
+
               <option value="All">All Status</option>
+
               <option value="Active">Active</option>
+
               <option value="Inactive">Inactive</option>
+
             </select>
 
             <button
@@ -331,14 +644,19 @@ function ManageUsers() {
             </button>
 
           </div>
+
         </div>
 
-        {/* Table */}
+        {/* ============================== */}
+        {/* TABLE */}
+        {/* ============================== */}
+
         <div className="manage-users-table-wrapper">
 
           <table className="manage-users-table">
 
             <thead>
+
               <tr>
                 <th>Job Seeker</th>
                 <th>Email</th>
@@ -348,50 +666,98 @@ function ManageUsers() {
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
+
             </thead>
 
             <tbody>
 
-              {filteredUsers.length > 0 ? (
+              {loadingUsers ? (
+
+                <tr>
+                  <td colSpan="7" className="manage-users-empty">
+                    Loading Job Seekers...
+                  </td>
+                </tr>
+
+              ) : usersError ? (
+
+                <tr>
+                  <td colSpan="7" className="manage-users-empty">
+                    {usersError}
+                  </td>
+                </tr>
+
+              ) : filteredUsers.length > 0 ? (
+
                 filteredUsers.map((user) => (
 
                   <tr key={user.id}>
 
+                    {/* USER NAME */}
+
                     <td>
+
                       <div className="manage-user-name">
+
                         <div className="manage-user-avatar">
                           <UserRound size={18} />
                         </div>
-                        <span>{user.name || "Unnamed User"}</span>
+
+                        <span>
+                          {user.name || "Unnamed User"}
+                        </span>
+
                       </div>
+
                     </td>
 
-                    <td>{user.email || "Not provided"}</td>
-
-                    <td>{user.phone || "Not provided"}</td>
-
-                    <td>{user.location || "Not provided"}</td>
-
-                    <td>{formatDate(user.joinedDate)}</td>
+                    {/* EMAIL */}
 
                     <td>
+                      {user.email || "Not provided"}
+                    </td>
+
+                    {/* PHONE */}
+
+                    <td>
+                      {user.phone || "Not provided"}
+                    </td>
+
+                    {/* DISTRICT */}
+
+                    <td>
+                      {user.location || "Not provided"}
+                    </td>
+
+                    {/* JOINED DATE */}
+
+                    <td>
+                      {formatDate(user.createdAt)}
+                    </td>
+
+                    {/* STATUS */}
+
+                    <td>
+
                       <span
-                        className={`user-status ${String(
-                          user.status || ""
-                        ).toLowerCase()}`}
+                        className={`user-status ${getUserStatus(user).toLowerCase()}`}
                       >
-                        {user.status || "Not specified"}
+                        {getUserStatus(user)}
                       </span>
+
                     </td>
 
+                    {/* ACTIONS */}
+
                     <td>
+
                       <div className="manage-user-actions">
 
                         <button
                           type="button"
                           className="view-user-btn"
                           title="View Profile"
-                          onClick={() => setSelectedUser(user)}
+                          onClick={() => handleViewUser(user)}
                         >
                           <Eye size={16} />
                         </button>
@@ -408,43 +774,55 @@ function ManageUsers() {
                         <button
                           type="button"
                           className="delete-user-btn"
-                          title="Delete User"
-                          onClick={() => handleDelete(user.id)}
+                          title="Delete User Profile"
+                          onClick={() => handleDelete(user)}
                         >
                           <Trash2 size={16} />
                         </button>
 
                       </div>
+
                     </td>
 
                   </tr>
 
                 ))
+
               ) : (
+
                 <tr>
                   <td colSpan="7" className="manage-users-empty">
                     No Job Seekers found.
                   </td>
                 </tr>
+
               )}
 
             </tbody>
 
           </table>
+
         </div>
 
+        {/* RESULTS */}
+
         <div className="manage-users-results">
+
           Showing {filteredUsers.length} of {users.length} Job Seekers
+
         </div>
 
       </div>
 
-      {/* View Job Seeker Profile Modal */}
+      {/* ====================================== */}
+      {/* VIEW USER PROFILE MODAL */}
+      {/* ====================================== */}
+
       {selectedUser && (
 
         <div
           className="user-profile-modal-overlay"
-          onClick={() => setSelectedUser(null)}
+          onClick={handleCloseProfile}
         >
 
           <div
@@ -452,46 +830,79 @@ function ManageUsers() {
             onClick={(e) => e.stopPropagation()}
           >
 
+            {/* PROFILE HEADER */}
+
             <div className="user-profile-modal-header">
 
               <div>
+
                 <h2>Job Seeker Profile</h2>
-                <p>View personal information and account activity.</p>
+
+                <p>
+                  View personal information and account activity.
+                </p>
+
               </div>
 
               <button
                 type="button"
                 className="user-profile-close-btn"
-                onClick={() => setSelectedUser(null)}
+                onClick={handleCloseProfile}
               >
                 <X size={21} />
               </button>
 
             </div>
 
-            {/* Profile Summary */}
+            {/* PROFILE SUMMARY */}
+
             <div className="user-profile-summary">
 
               <div className="user-profile-avatar">
-                <UserRound size={32} />
+
+                {selectedUser.photoURL ? (
+
+                  <img
+                    src={selectedUser.photoURL}
+                    alt={selectedUser.name || "User"}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      borderRadius: "50%",
+                    }}
+                  />
+
+                ) : (
+
+                  <UserRound size={32} />
+
+                )}
+
               </div>
 
               <div className="user-profile-identity">
-                <h3>{selectedUser.name || "Unnamed User"}</h3>
-                <p>{selectedUser.email || "No email provided"}</p>
+
+                <h3>
+                  {selectedUser.name || "Unnamed User"}
+                </h3>
+
+                <p>
+                  {selectedUser.email || "No email provided"}
+                </p>
 
                 <span
-                  className={`user-status ${String(
-                    selectedUser.status || ""
-                  ).toLowerCase()}`}
+                  className={`user-status ${getUserStatus(selectedUser).toLowerCase()}`}
                 >
-                  {selectedUser.status || "Not specified"}
+                  {getUserStatus(selectedUser)}
                 </span>
+
               </div>
 
             </div>
 
-            {/* Personal Information */}
+            {/* PERSONAL INFORMATION */}
+
             <div className="user-profile-section">
 
               <h3>
@@ -502,30 +913,63 @@ function ManageUsers() {
               <div className="user-profile-details-grid">
 
                 <div className="user-profile-detail">
-                  <span><Mail size={16} /> Email Address</span>
-                  <strong>{displayValue(selectedUser.email)}</strong>
+
+                  <span>
+                    <Mail size={16} />
+                    Email Address
+                  </span>
+
+                  <strong>
+                    {displayValue(selectedUser.email)}
+                  </strong>
+
                 </div>
 
                 <div className="user-profile-detail">
-                  <span><Phone size={16} /> Phone Number</span>
-                  <strong>{displayValue(selectedUser.phone)}</strong>
+
+                  <span>
+                    <Phone size={16} />
+                    Phone Number
+                  </span>
+
+                  <strong>
+                    {displayValue(selectedUser.phone)}
+                  </strong>
+
                 </div>
 
                 <div className="user-profile-detail">
-                  <span><MapPin size={16} /> District</span>
-                  <strong>{displayValue(selectedUser.location)}</strong>
+
+                  <span>
+                    <MapPin size={16} />
+                    District
+                  </span>
+
+                  <strong>
+                    {displayValue(selectedUser.location)}
+                  </strong>
+
                 </div>
 
                 <div className="user-profile-detail">
-                  <span><CalendarDays size={16} /> Joined Date</span>
-                  <strong>{formatDate(selectedUser.joinedDate)}</strong>
+
+                  <span>
+                    <CalendarDays size={16} />
+                    Joined Date
+                  </span>
+
+                  <strong>
+                    {formatDate(selectedUser.createdAt)}
+                  </strong>
+
                 </div>
 
               </div>
 
             </div>
 
-            {/* Activity Overview */}
+            {/* ACTIVITY OVERVIEW */}
+
             <div className="user-profile-section">
 
               <h3>
@@ -536,36 +980,59 @@ function ManageUsers() {
               <div className="user-activity-stats">
 
                 <div className="user-activity-stat">
+
                   <CalendarDays size={19} />
+
                   <div>
-                    <strong>{selectedUser.totalActiveDays ?? 0}</strong>
-                    <span>Active Days</span>
+
+                    <strong>
+                      {getActiveDays(activities)}
+                    </strong>
+
+                    <span>Recorded Active Days</span>
+
                   </div>
+
                 </div>
 
                 <div className="user-activity-stat">
+
                   <LogIn size={19} />
+
                   <div>
-                    <strong>{selectedUser.totalLogins ?? 0}</strong>
+
+                    <strong>
+                      {selectedUser.totalLogins ?? 0}
+                    </strong>
+
                     <span>Total Logins</span>
+
                   </div>
+
                 </div>
 
                 <div className="user-activity-stat">
+
                   <Clock size={19} />
+
                   <div>
+
                     <strong>
                       {formatDate(selectedUser.lastActive)}
                     </strong>
+
                     <span>Last Active</span>
+
                   </div>
+
                 </div>
 
               </div>
 
             </div>
 
-            {/* Activity History */}
+            {/* ACTIVITY HISTORY */}
+
             <div className="user-profile-section">
 
               <h3>
@@ -573,24 +1040,41 @@ function ManageUsers() {
                 Recent Activity
               </h3>
 
-              {selectedUser.activityHistory?.length > 0 ? (
+              {loadingActivities ? (
+
+                <p className="user-no-activity">
+                  Loading activity history...
+                </p>
+
+              ) : activityError ? (
+
+                <p className="user-no-activity">
+                  {activityError}
+                </p>
+
+              ) : activities.length > 0 ? (
 
                 <div className="user-activity-history">
 
-                  {selectedUser.activityHistory.map((activity, index) => (
+                  {activities.slice(0, 10).map((activity) => (
 
                     <div
                       className="user-activity-history-item"
-                      key={activity.id || index}
+                      key={activity.id}
                     >
 
                       <div className="user-activity-dot"></div>
 
                       <div className="user-activity-history-content">
-                        <strong>{activity.action}</strong>
+
+                        <strong>
+                          {activity.action}
+                        </strong>
+
                         <span>
-                          {formatDate(activity.date)} · {activity.time || ""}
+                          {formatDateTime(activity.createdAt)}
                         </span>
+
                       </div>
 
                     </div>
@@ -600,14 +1084,17 @@ function ManageUsers() {
                 </div>
 
               ) : (
+
                 <p className="user-no-activity">
                   No activity records available.
                 </p>
+
               )}
 
             </div>
 
-            {/* Profile Actions */}
+            {/* PROFILE FOOTER */}
+
             <div className="user-profile-modal-footer">
 
               <button
@@ -622,7 +1109,7 @@ function ManageUsers() {
               <button
                 type="button"
                 className="user-profile-done-btn"
-                onClick={() => setSelectedUser(null)}
+                onClick={handleCloseProfile}
               >
                 Close
               </button>
@@ -630,12 +1117,16 @@ function ManageUsers() {
             </div>
 
           </div>
+
         </div>
 
       )}
 
-      {/* Edit Job Seeker Modal */}
-      {editingUser && (
+      {/* ====================================== */}
+      {/* EDIT USER MODAL */}
+      {/* ====================================== */}
+
+      {editingUserId && (
 
         <div
           className="edit-user-modal-overlay"
@@ -647,11 +1138,18 @@ function ManageUsers() {
             onClick={(e) => e.stopPropagation()}
           >
 
+            {/* EDIT HEADER */}
+
             <div className="edit-user-modal-header">
 
               <div>
+
                 <h2>Edit Job Seeker</h2>
-                <p>Update Job Seeker account details.</p>
+
+                <p>
+                  Update Job Seeker account details.
+                </p>
+
               </div>
 
               <button
@@ -664,11 +1162,16 @@ function ManageUsers() {
 
             </div>
 
+            {/* EDIT FORM */}
+
             <form onSubmit={handleSaveEdit}>
 
               <div className="edit-user-form-grid">
 
+                {/* NAME */}
+
                 <div className="edit-user-field">
+
                   <label>Full Name</label>
 
                   <input
@@ -679,22 +1182,29 @@ function ManageUsers() {
                     placeholder="Enter full name"
                     required
                   />
+
                 </div>
 
+                {/* EMAIL */}
+
                 <div className="edit-user-field">
+
                   <label>Email Address</label>
 
                   <input
                     type="email"
                     name="email"
                     value={editForm.email}
-                    onChange={handleEditChange}
-                    placeholder="Enter email address"
-                    required
+                    disabled
+                    readOnly
                   />
+
                 </div>
 
+                {/* PHONE */}
+
                 <div className="edit-user-field">
+
                   <label>Phone Number</label>
 
                   <input
@@ -704,9 +1214,13 @@ function ManageUsers() {
                     onChange={handleEditChange}
                     placeholder="Enter phone number"
                   />
+
                 </div>
 
+                {/* DISTRICT */}
+
                 <div className="edit-user-field">
+
                   <label>District</label>
 
                   <DistrictDropdown
@@ -716,9 +1230,13 @@ function ManageUsers() {
                     required
                     placeholder="Select District"
                   />
+
                 </div>
 
+                {/* STATUS */}
+
                 <div className="edit-user-field edit-user-full-width">
+
                   <label>Account Status</label>
 
                   <select
@@ -726,12 +1244,18 @@ function ManageUsers() {
                     value={editForm.status}
                     onChange={handleEditChange}
                   >
+
                     <option value="Active">Active</option>
+
                     <option value="Inactive">Inactive</option>
+
                   </select>
+
                 </div>
 
               </div>
+
+              {/* FORM ACTIONS */}
 
               <div className="edit-user-modal-actions">
 
@@ -755,12 +1279,15 @@ function ManageUsers() {
             </form>
 
           </div>
+
         </div>
 
       )}
 
     </div>
+
   );
+
 }
 
 export default ManageUsers;
