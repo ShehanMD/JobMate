@@ -42,6 +42,8 @@ import ManageUsers from "./pages/admin/ManageUsers";
 import ManageWorkers from "./pages/admin/ManageWorkers";
 import WorkerProfile from "./pages/admin/WorkerProfile";
 
+import SkilledWorkers from "./pages/SkilledWorkers";
+
 import "./App.css";
 
 function AppContent() {
@@ -80,9 +82,9 @@ function AppContent() {
 
           <Route
             path="/workers"
-            element={<h1>Skilled Workers Page</h1>}
+            element={<SkilledWorkers />}
           />
-
+          
           <Route
             path="/about"
             element={<h1>About Page</h1>}
