@@ -19,6 +19,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import WorkerProfile from "./WorkerProfile";
 import "./Profile.css";
 
 const SRI_LANKA_DISTRICTS = [
@@ -53,6 +54,10 @@ const formatShortDate = (dateStr) => {
 function Profile() {
   const navigate = useNavigate();
   const auth = useAuth();
+  const userRole = (auth?.userData?.role || "").toLowerCase();
+  if (userRole.includes("worker")) {
+    return <WorkerProfile />;
+  }
   const currentUser = auth?.user || auth?.currentUser || {};
 
   const userEmail = currentUser.email || "user@example.com";
