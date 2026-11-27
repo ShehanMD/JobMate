@@ -7,7 +7,12 @@ import { GoogleGenAI } from "@google/genai";
 dotenv.config();
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
+
+// Check Gemini API Key
+if (!process.env.GEMINI_API_KEY) {
+  throw new Error("GEMINI_API_KEY is missing. Please configure it.");
+}
 
 // Middleware
 app.use(cors());
@@ -73,7 +78,6 @@ async function generateAIResponse(contents) {
     } catch (error) {
       const status = error.status;
 
-      // Retry temporary server or rate-limit errors
       if (![429, 503].includes(status) || attempt === 3) {
         throw error;
       }
@@ -82,7 +86,6 @@ async function generateAIResponse(contents) {
         `Gemini temporarily unavailable. Retry attempt ${attempt}/3...`
       );
 
-      // Wait before retrying
       await new Promise((resolve) =>
         setTimeout(resolve, attempt * 2000)
       );
@@ -92,17 +95,17 @@ async function generateAIResponse(contents) {
   throw new Error("Job Assistant AI is currently unavailable.");
 }
 
-// Test route
+// Health Check Route
 app.get("/", (req, res) => {
-  res.send("Job Assistant Server is running!");
+  res.status(200).send("Job Assistant Server is running!");
 });
 
-// Chat route
+// Chat Route
 app.post("/api/chat", async (req, res) => {
   try {
     const { message, history = [] } = req.body;
 
-    if (!message || typeof message !== "string") {
+    if (!message || typeof message !== "string" || !message.trim()) {
       return res.status(400).json({
         error: "Message is required",
       });
@@ -127,13 +130,12 @@ app.post("/api/chat", async (req, res) => {
     // Add current message
     conversationHistory.push({
       role: "user",
-      parts: [{ text: message }],
+      parts: [{ text: message.trim() }],
     });
 
     // Generate Gemini AI response
     const response = await generateAIResponse(conversationHistory);
 
-    // Send response to frontend
     res.json({
       reply: response.text || "Sorry, I couldn't generate a response.",
     });
@@ -148,6 +150,6 @@ app.post("/api/chat", async (req, res) => {
 });
 
 // Start Server
-app.listen(PORT, () => {
-  console.log(`Job Assistant Server running on http://localhost:${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Job Assistant Server running on port ${PORT}`);
 });
