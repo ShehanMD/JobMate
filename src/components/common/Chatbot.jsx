@@ -15,6 +15,8 @@ import {
 import "./Chatbot.css";
 
 function Chatbot() {
+  const API_URL = import.meta.env.VITE_API_URL;
+
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -39,6 +41,24 @@ function Chatbot() {
 
     if (!message || isLoading) return;
 
+    if (!API_URL) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          sender: "user",
+          text: message,
+        },
+        {
+          id: Date.now() + 1,
+          sender: "bot",
+          text: "⚠️ Job Assistant is currently being configured. Please try again later.",
+        },
+      ]);
+      setInput("");
+      return;
+    }
+
     const userMessage = {
       id: Date.now(),
       sender: "user",
@@ -56,7 +76,7 @@ function Chatbot() {
     }, 30000);
 
     try {
-      const response = await fetch("http://localhost:5000/api/chat", {
+      const response = await fetch(`${API_URL.replace(/\/+$/, "")}/api/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
