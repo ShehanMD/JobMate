@@ -2,8 +2,9 @@ import { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 
 import {
-  Menu, X, Sun, Moon, ChevronDown,
-  LayoutDashboard, UserRound, LogOut
+  Menu, X, ChevronDown,
+  LayoutDashboard, UserRound, LogOut,
+  Bell, ArrowLeft
 } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
@@ -36,13 +37,26 @@ const toggleDropdown = (menuName) => {
 };
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
   const { currentUser, userData, isAdmin, logout } = useAuth();
 
   const navigate = useNavigate();
   const profileRef = useRef(null);
+  const [notifOpen, setNotifOpen] = useState(false);
+const notifRef = useRef(null);
+
+const [notifications, setNotifications] = useState([
+  {
+    id: 1,
+    title: "Welcome to PattaJobs!",
+    message: "Complete your profile to get better job matches.",
+    time: "Just now",
+    read: false,
+  },
+]);
+
+const unreadCount = notifications.filter((n) => !n.read).length;
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -50,6 +64,9 @@ const toggleDropdown = (menuName) => {
     const handleClick = (e) => {
       if (profileRef.current && !profileRef.current.contains(e.target)) {
         setProfileOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+      setNotifOpen(false);
       }
     };
 
@@ -187,14 +204,6 @@ const toggleDropdown = (menuName) => {
 
         <div className="navbar-actions">
 
-          <button
-            className="theme-toggle-btn"
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            aria-label="Toggle theme"
-          >
-            {isDarkMode ? <Moon size={20}/> : <Sun size={20}/>}
-          </button>
-
           {!currentUser ? (
             <>
               <NavLink to="/login" className="signin-btn">
@@ -206,57 +215,119 @@ const toggleDropdown = (menuName) => {
               </NavLink>
             </>
           ) : (
-            <div className="profile-menu" ref={profileRef}>
+            <>
+              <div className="pj-notif-wrapper" ref={notifRef}>
+                <button
+                  type="button"
+                  className="pj-notif-btn"
+                  onClick={() => {
+                    setNotifOpen((prev) => !prev);
+                    setProfileOpen(false);
+                  }}
+                  aria-label="Notifications"
+                >
+                  <Bell size={21} strokeWidth={2} />
+                  {unreadCount > 0 && (
+                    <span className="pj-notif-badge">{unreadCount}</span>
+                  )}
+                </button>
 
-              <button
-                className="profile-trigger"
-                onClick={() => setProfileOpen(!profileOpen)}
-              >
-                {currentUser.photoURL ? (
-                  <img
-                    src={currentUser.photoURL}
-                    alt="Profile"
-                    className="navbar-avatar"
-                  />
-                ) : (
-                  <div className="navbar-avatar-placeholder">
-                    <UserRound size={19}/>
+                {notifOpen && (
+                  <div className="pj-notif-popup">
+                    <div className="pj-notif-header">
+                      <div className="pj-notif-title-wrap">
+                        <button
+                          type="button"
+                          className="pj-notif-back-btn"
+                          onClick={() => setNotifOpen(false)}
+                          aria-label="Close notifications"
+                        >
+                          <ArrowLeft size={18} strokeWidth={2.2} />
+                        </button>
+                        <h4>Notifications</h4>
+                      </div>
+                    </div>
+
+                    <div className="pj-notif-list">
+                      {notifications.map((item) => (
+                        <div
+                          key={item.id}
+                          className={`pj-notif-item ${!item.read ? "unread" : ""}`}
+                          onClick={() =>
+                            setNotifications((prev) =>
+                              prev.map((n) =>
+                                n.id === item.id ? { ...n, read: true } : n
+                              )
+                            )
+                          }
+                        >
+                          <div className="pj-notif-item-top">
+                            <strong>{item.title}</strong>
+                            <span>{item.time}</span>
+                          </div>
+                          <p>{item.message}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
+              </div>
+              <div className="profile-menu" ref={profileRef}>
 
-                <span>{userData?.name || currentUser.displayName || "My Account"}</span>
+                <button
+                  className="profile-trigger"
+                  onClick={() => setProfileOpen(!profileOpen)}
+                >
+                  {currentUser.photoURL ? (
+                    <img
+                      src={currentUser.photoURL}
+                      alt="Profile"
+                      className="navbar-avatar"
+                    />
+                  ) : (
+                    <div className="navbar-avatar-placeholder">
+                      <UserRound size={19}/>
+                    </div>
+                  )}
 
-                <ChevronDown size={15}/>
-              </button>
+                  <span>{userData?.name || currentUser.displayName || "My Account"}</span>
 
-              {profileOpen && (
-                <div className="profile-dropdown">
+                  <ChevronDown size={15}/>
+                </button>
 
-                  <div className="dropdown-user-info">
-                    <strong>{userData?.name || "User"}</strong>
-                    <small>{currentUser.email}</small>
+                {profileOpen && (
+                  <div className="profile-dropdown">
+
+                    <div className="dropdown-user-info">
+                      <strong>{userData?.name || "User"}</strong>
+                      <small>{currentUser.email}</small>
+                    </div>
+
+                    {(isAdmin || userData?.role === "worker") && (
+                      <NavLink
+                        to={dashboardPath}
+                        onClick={() => setProfileOpen(false)}
+                      >
+                        <LayoutDashboard size={17} />
+                        Dashboard
+                      </NavLink>
+                    )}
+
+                    <NavLink to={profilePath}
+                      onClick={() => setProfileOpen(false)}>
+                      <UserRound size={17}/>
+                      Your Profile
+                    </NavLink>
+
+                    <button onClick={handleLogout}>
+                      <LogOut size={17}/>
+                      Sign Out
+                    </button>
+
                   </div>
-
-                  <NavLink to={dashboardPath}
-                    onClick={() => setProfileOpen(false)}>
-                    <LayoutDashboard size={17}/>
-                    Dashboard
-                  </NavLink>
-
-                  <NavLink to={profilePath}
-                    onClick={() => setProfileOpen(false)}>
-                    <UserRound size={17}/>
-                    Your Profile
-                  </NavLink>
-
-                  <button onClick={handleLogout}>
-                    <LogOut size={17}/>
-                    Sign Out
-                  </button>
-
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            </>
           )}
 
         </div>
