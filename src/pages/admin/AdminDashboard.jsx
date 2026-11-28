@@ -9,6 +9,7 @@ import {
   BriefcaseBusiness,
   Users,
   UserCheck,
+  UserX,
   Activity,
   ShieldCheck,
   Building2,
@@ -19,6 +20,7 @@ import {
   Clock,
   Plus,
   Trash2,
+  Megaphone,
 } from "lucide-react";
 
 import {
@@ -32,8 +34,11 @@ import {
   subscribeToAllJobs,
 } from "../../services/jobService";
 
-import "./AdminDashboard.css";
+import {
+  subscribeToAllWorkerAds,
+} from "../../services/workerAdService";
 
+import "./AdminDashboard.css";
 
 // ======================================
 // LOCAL STORAGE HELPER
@@ -46,12 +51,10 @@ const readStorage = (key) => {
     );
 
     return Array.isArray(parsed) ? parsed : [];
-
   } catch {
     return [];
   }
 };
-
 
 // ======================================
 // DATE HELPERS
@@ -67,11 +70,8 @@ const getDate = (value) => {
         ? value
         : new Date(value);
 
-  return Number.isNaN(date.getTime())
-    ? null
-    : date;
+  return Number.isNaN(date.getTime()) ? null : date;
 };
-
 
 const formatDate = (value) => {
   const date = getDate(value);
@@ -85,7 +85,6 @@ const formatDate = (value) => {
   });
 };
 
-
 const getLocalDateString = (date) => {
   return [
     date.getFullYear(),
@@ -94,39 +93,31 @@ const getLocalDateString = (date) => {
   ].join("-");
 };
 
-
 // ======================================
 // ADMIN DASHBOARD
 // ======================================
 
 function AdminDashboard() {
   const [jobs, setJobs] = useState([]);
-
   const [users, setUsers] = useState([]);
-
   const [workers, setWorkers] = useState([]);
+  const [workerAds, setWorkerAds] = useState([]);
 
   const [employers, setEmployers] = useState([]);
-
   const [reportedJobs, setReportedJobs] = useState([]);
-
   const [notifications, setNotifications] = useState([]);
-
   const [reminders, setReminders] = useState([]);
 
-
   const [reminderTitle, setReminderTitle] = useState("");
-
   const [reminderDate, setReminderDate] = useState("");
 
-
   // ======================================
-  // REAL-TIME FIRESTORE + LOCAL DATA
+  // REAL-TIME FIRESTORE DATA
   // ======================================
 
   useEffect(() => {
 
-    // USERS
+    // USERS AND SKILLED WORKERS
 
     const unsubscribeUsers = onSnapshot(
       collection(db, "users"),
@@ -138,26 +129,18 @@ function AdminDashboard() {
         }));
 
         setUsers(
-          allUsers.filter(
-            (user) => user.role === "user"
-          )
+          allUsers.filter((user) => user.role === "user")
         );
 
         setWorkers(
-          allUsers.filter(
-            (user) => user.role === "worker"
-          )
+          allUsers.filter((worker) => worker.role === "worker")
         );
       },
 
       (error) => {
-        console.error(
-          "Unable to load users:",
-          error
-        );
+        console.error("Unable to load users:", error);
       }
     );
-
 
     // JOBS
 
@@ -167,102 +150,141 @@ function AdminDashboard() {
       },
 
       (error) => {
-        console.error(
-          "Unable to load jobs:",
-          error
-        );
+        console.error("Unable to load jobs:", error);
       }
     );
 
+    // WORKER SERVICE ADVERTISEMENTS
 
-    // LOCAL STORAGE DATA
+    const unsubscribeWorkerAds = subscribeToAllWorkerAds(
+      (fetchedAds) => {
+        setWorkerAds(fetchedAds);
+      },
+
+      (error) => {
+        console.error("Unable to load worker ads:", error);
+      }
+    );
+
+    // LOCAL DATA
 
     const loadLocalData = () => {
-      setEmployers(
-        readStorage("jobmate_employers")
-      );
+      setEmployers(readStorage("jobmate_employers"));
 
-      setReportedJobs(
-        readStorage("jobmate_reported_jobs")
-      );
+      setReportedJobs(readStorage("jobmate_reported_jobs"));
 
-      setNotifications(
-        readStorage("jobmate_notifications")
-      );
+      setNotifications(readStorage("jobmate_notifications"));
 
-      setReminders(
-        readStorage("jobmate_reminders")
-      );
+      setReminders(readStorage("jobmate_reminders"));
     };
-
 
     loadLocalData();
 
-    window.addEventListener(
-      "storage",
-      loadLocalData
-    );
-
+    window.addEventListener("storage", loadLocalData);
 
     // CLEANUP
 
     return () => {
       unsubscribeUsers();
-
       unsubscribeJobs();
+      unsubscribeWorkerAds();
 
-      window.removeEventListener(
-        "storage",
-        loadLocalData
-      );
+      window.removeEventListener("storage", loadLocalData);
     };
 
   }, []);
 
-
   // ======================================
-  // DATE AND COUNTS
+  // WORKER STATISTICS
   // ======================================
 
-  const today = new Date();
+  const activeWorkers = workers.filter(
+    (worker) =>
+      String(worker.status || "Active").toLowerCase() === "active"
+  ).length;
 
-  const todayString = getLocalDateString(today);
+  const inactiveWorkers = workers.filter(
+    (worker) =>
+      String(worker.status || "Active").toLowerCase() === "inactive"
+  ).length;
 
-
-  // Pending worker verification.
   const pendingWorkers = workers.filter(
     (worker) =>
-      String(
-        worker.verificationStatus || ""
-      ).toLowerCase() === "pending"
+      String(worker.verificationStatus || "Pending").toLowerCase() ===
+      "pending"
   );
 
+  const verifiedWorkers = workers.filter(
+    (worker) =>
+      String(worker.verificationStatus || "").toLowerCase() ===
+      "verified"
+  ).length;
 
-  // Pending employer approvals.
-  const pendingEmployers = employers.filter(
-    (employer) => {
-      const status =
-        employer.approvalStatus ||
-        employer.status ||
-        "Pending";
+  // ======================================
+  // WORKER ADVERTISEMENT STATISTICS
+  // ======================================
 
-      return String(status).toLowerCase() === "pending";
-    }
-  );
+  const pendingWorkerAds = workerAds.filter(
+    (ad) => ad.status === "Pending"
+  ).length;
 
+  const approvedWorkerAds = workerAds.filter(
+    (ad) => ad.status === "Approved"
+  ).length;
 
-  // Pending job reports.
+  // ======================================
+  // OTHER PENDING APPROVALS
+  // ======================================
+
+  const pendingEmployers = employers.filter((employer) => {
+    const status =
+      employer.approvalStatus ||
+      employer.status ||
+      "Pending";
+
+    return String(status).toLowerCase() === "pending";
+  });
+
   const pendingReports = reportedJobs.filter(
     (report) =>
       String(report.status || "Pending").toLowerCase() === "pending"
   );
 
-
-  // Unread notifications.
   const unreadNotifications = notifications.filter(
     (notification) => !notification.isRead
   ).length;
 
+  // ======================================
+  // DASHBOARD STATISTICS
+  // ======================================
+
+  const statistics = [
+    {
+      title: "Total Jobs",
+      value: jobs.length,
+      icon: <BriefcaseBusiness size={25} />,
+    },
+    {
+      title: "Total Job Seekers",
+      value: users.length,
+      icon: <Users size={25} />,
+    },
+    {
+      title: "Total Skilled Workers",
+      value: workers.length,
+      icon: <UserCheck size={25} />,
+    },
+    {
+      title: "Active Skilled Workers",
+      value: activeWorkers,
+      icon: <UserCheck size={25} />,
+    },
+    {
+      title: "Inactive Skilled Workers",
+      value: inactiveWorkers,
+      icon: <UserX size={25} />,
+    },
+  ];
 
   // ======================================
   // RECENT ACTIVITIES
@@ -273,44 +295,37 @@ function AdminDashboard() {
 
       ...users.map((user) => ({
         id: `user-${user.id}`,
-
         title: `${user.name || "A Job Seeker"} registered`,
-
         type: "Job Seeker Registration",
-
         date: user.createdAt,
-
         icon: <Users size={17} />,
       })),
 
-
       ...workers.map((worker) => ({
         id: `worker-${worker.id}`,
-
         title: `${worker.name || "A Skilled Worker"} registered`,
-
         type: "Skilled Worker Registration",
-
         date: worker.createdAt,
-
         icon: <UserCheck size={17} />,
       })),
 
-
       ...jobs.map((job) => ({
         id: `job-${job.id}`,
-
         title: `${job.title || "A job"} was posted`,
-
         type: "New Job Post",
-
         date: job.createdAt,
-
         icon: <BriefcaseBusiness size={17} />,
       })),
 
-    ];
+      ...workerAds.map((ad) => ({
+        id: `worker-ad-${ad.id}`,
+        title: `${ad.workerName || "A Worker"} submitted a service post`,
+        type: "Worker Advertisement Submission",
+        date: ad.submittedAt,
+        icon: <Megaphone size={17} />,
+      })),
 
+    ];
 
     return activityItems
       .filter((item) => getDate(item.date))
@@ -319,18 +334,19 @@ function AdminDashboard() {
       )
       .slice(0, 6);
 
-  }, [users, workers, jobs]);
-
+  }, [users, workers, jobs, workerAds]);
 
   // ======================================
   // UPCOMING EVENTS
   // ======================================
 
+  const today = new Date();
+  const todayString = getLocalDateString(today);
+
   const upcomingEvents = useMemo(() => {
     const todayStart = new Date(
       `${todayString}T00:00:00`
     );
-
 
     const jobEvents = jobs
       .filter((job) => {
@@ -340,14 +356,10 @@ function AdminDashboard() {
       })
       .map((job) => ({
         id: `job-${job.id}`,
-
         title: `${job.title || "Job"} deadline`,
-
         date: job.deadline,
-
         type: "Job Deadline",
       }));
-
 
     const reminderEvents = reminders
       .filter((reminder) => {
@@ -357,16 +369,11 @@ function AdminDashboard() {
       })
       .map((reminder) => ({
         id: `reminder-${reminder.id}`,
-
         title: reminder.title,
-
         date: reminder.date,
-
         type: "Reminder",
-
         reminderId: reminder.id,
       }));
-
 
     return [...jobEvents, ...reminderEvents]
       .sort(
@@ -376,7 +383,6 @@ function AdminDashboard() {
 
   }, [jobs, reminders, todayString]);
 
-
   // ======================================
   // ADD REMINDER
   // ======================================
@@ -384,18 +390,11 @@ function AdminDashboard() {
   const handleAddReminder = (event) => {
     event.preventDefault();
 
-    if (
-      !reminderTitle.trim() ||
-      !reminderDate
-    ) {
-      return;
-    }
+    if (!reminderTitle.trim() || !reminderDate) return;
 
     const newReminder = {
       id: Date.now(),
-
       title: reminderTitle.trim(),
-
       date: reminderDate,
     };
 
@@ -412,10 +411,8 @@ function AdminDashboard() {
     );
 
     setReminderTitle("");
-
     setReminderDate("");
   };
-
 
   // ======================================
   // DELETE REMINDER
@@ -434,7 +431,6 @@ function AdminDashboard() {
     );
   };
 
-
   // ======================================
   // MARK AS READ
   // ======================================
@@ -443,10 +439,7 @@ function AdminDashboard() {
     const updatedNotifications = notifications.map(
       (notification) =>
         notification.id === id
-          ? {
-              ...notification,
-              isRead: true,
-            }
+          ? { ...notification, isRead: true }
           : notification
     );
 
@@ -457,7 +450,6 @@ function AdminDashboard() {
       JSON.stringify(updatedNotifications)
     );
   };
-
 
   // ======================================
   // MARK ALL AS READ
@@ -479,7 +471,6 @@ function AdminDashboard() {
     );
   };
 
-
   // ======================================
   // RENDER
   // ======================================
@@ -489,64 +480,46 @@ function AdminDashboard() {
 
       <main className="admin-dashboard-main">
 
-        {/* DASHBOARD HEADER */}
+        {/* HEADER */}
 
         <header className="admin-dashboard-header">
-
           <div>
             <h1>Dashboard Overview</h1>
-
-            <p>
-              Welcome to the Workora Admin Panel
-            </p>
+            <p>Welcome to the PattaJobs Admin Panel</p>
           </div>
 
           <span className="admin-profile">
             Admin
           </span>
-
         </header>
 
-
-        {/* STATISTICS */}
+        {/* ======================================
+            STATISTICS
+        ====================================== */}
 
         <section className="admin-stat-grid">
 
-          <div className="admin-stat-card">
-            <BriefcaseBusiness size={25} />
+          {statistics.map((stat) => (
+            <div className="admin-stat-card" key={stat.title}>
 
-            <h3>Total Jobs</h3>
+              {stat.icon}
 
-            <strong>{jobs.length}</strong>
-          </div>
+              <h3>{stat.title}</h3>
 
+              <strong>{stat.value}</strong>
 
-          <div className="admin-stat-card">
-            <Users size={25} />
-
-            <h3>Total Job Seekers</h3>
-
-            <strong>{users.length}</strong>
-          </div>
-
-
-          <div className="admin-stat-card">
-            <UserCheck size={25} />
-
-            <h3>Total Skilled Workers</h3>
-
-            <strong>{workers.length}</strong>
-          </div>
+            </div>
+          ))}
 
         </section>
 
-
-        {/* RECENT ACTIVITIES */}
+        {/* ======================================
+            RECENT ACTIVITIES
+        ====================================== */}
 
         <section className="admin-dashboard-section">
 
           <div className="admin-section-heading">
-
             <div>
               <h2>
                 <Activity size={20} />
@@ -557,16 +530,12 @@ function AdminDashboard() {
                 Latest activities on your platform
               </p>
             </div>
-
           </div>
 
-
           {recentActivities.length > 0 ? (
-
             <div className="admin-activity-list">
 
               {recentActivities.map((activity) => (
-
                 <div
                   className="admin-activity-item"
                   key={activity.id}
@@ -577,40 +546,31 @@ function AdminDashboard() {
                   </div>
 
                   <div className="admin-activity-info">
-
                     <strong>{activity.title}</strong>
-
                     <span>{activity.type}</span>
-
                   </div>
 
-                  <time>
-                    {formatDate(activity.date)}
-                  </time>
+                  <time>{formatDate(activity.date)}</time>
 
                 </div>
-
               ))}
 
             </div>
-
           ) : (
-
             <p className="admin-empty-message">
               No recent activities available.
             </p>
-
           )}
 
         </section>
 
-
-        {/* PENDING APPROVALS */}
+        {/* ======================================
+            PENDING APPROVALS
+        ====================================== */}
 
         <section className="admin-dashboard-section">
 
           <div className="admin-section-heading">
-
             <div>
               <h2>
                 <ShieldCheck size={20} />
@@ -621,68 +581,125 @@ function AdminDashboard() {
                 Items that require administrator attention
               </p>
             </div>
-
           </div>
-
 
           <div className="admin-approval-grid">
 
             {/* WORKER VERIFICATION */}
 
             <div className="admin-approval-card">
-
               <div className="admin-approval-icon worker">
                 <UserCheck size={22} />
               </div>
 
               <div>
                 <span>Worker Verification</span>
-
                 <strong>{pendingWorkers.length}</strong>
               </div>
-
             </div>
 
-
-            {/* EMPLOYER APPROVALS */}
+            {/* WORKER SERVICE POSTS */}
 
             <div className="admin-approval-card">
+              <div className="admin-approval-icon worker">
+                <Megaphone size={22} />
+              </div>
 
+              <div>
+                <span>Worker Service Posts</span>
+                <strong>{pendingWorkerAds}</strong>
+              </div>
+            </div>
+
+            {/* EMPLOYERS */}
+
+            <div className="admin-approval-card">
               <div className="admin-approval-icon employer">
                 <Building2 size={22} />
               </div>
 
               <div>
                 <span>Employer Approvals</span>
-
                 <strong>{pendingEmployers.length}</strong>
               </div>
-
             </div>
-
 
             {/* REPORTED JOBS */}
 
             <div className="admin-approval-card">
-
               <div className="admin-approval-icon report">
                 <Flag size={22} />
               </div>
 
               <div>
                 <span>Reported Jobs</span>
-
                 <strong>{pendingReports.length}</strong>
               </div>
-
             </div>
 
           </div>
 
         </section>
 
+        {/* ======================================
+            WORKER SUMMARY
+        ====================================== */}
 
-        {/* NOTIFICATIONS CENTER */}
+        <section className="admin-dashboard-section">
+
+          <div className="admin-section-heading">
+            <div>
+              <h2>
+                <UserCheck size={20} />
+                Skilled Worker Overview
+              </h2>
+
+              <p>Real-time worker registration and verification summary</p>
+            </div>
+          </div>
+
+          <div className="admin-approval-grid">
+
+            <div className="admin-approval-card">
+              <div className="admin-approval-icon worker">
+                <Users size={22} />
+              </div>
+
+              <div>
+                <span>Total Workers</span>
+                <strong>{workers.length}</strong>
+              </div>
+            </div>
+
+            <div className="admin-approval-card">
+              <div className="admin-approval-icon worker">
+                <CheckCircle2Icon />
+              </div>
+
+              <div>
+                <span>Verified Workers</span>
+                <strong>{verifiedWorkers}</strong>
+              </div>
+            </div>
+
+            <div className="admin-approval-card">
+              <div className="admin-approval-icon worker">
+                <Megaphone size={22} />
+              </div>
+
+              <div>
+                <span>Approved Service Posts</span>
+                <strong>{approvedWorkerAds}</strong>
+              </div>
+            </div>
+
+          </div>
+
+        </section>
+
+        {/* ======================================
+            NOTIFICATIONS CENTER
+        ====================================== */}
 
         <section className="admin-dashboard-section">
 
@@ -700,9 +717,7 @@ function AdminDashboard() {
               </p>
             </div>
 
-
             {unreadNotifications > 0 && (
-
               <button
                 type="button"
                 className="admin-text-button"
@@ -710,18 +725,14 @@ function AdminDashboard() {
               >
                 Mark all as read
               </button>
-
             )}
 
           </div>
 
-
           {notifications.length > 0 ? (
-
             <div className="admin-notification-list">
 
               {notifications.slice(0, 6).map((notification) => (
-
                 <div
                   className={`admin-notification-item ${
                     notification.isRead ? "read" : "unread"
@@ -731,16 +742,13 @@ function AdminDashboard() {
 
                   <div className="admin-notification-dot" />
 
-
                   <div className="admin-notification-info">
 
                     <strong>
                       {notification.title || "New notification"}
                     </strong>
 
-                    <p>
-                      {notification.message || ""}
-                    </p>
+                    <p>{notification.message || ""}</p>
 
                     {notification.createdAt && (
                       <time>
@@ -750,9 +758,7 @@ function AdminDashboard() {
 
                   </div>
 
-
                   {!notification.isRead && (
-
                     <button
                       type="button"
                       className="admin-icon-button"
@@ -763,32 +769,27 @@ function AdminDashboard() {
                     >
                       <Check size={17} />
                     </button>
-
                   )}
 
                 </div>
-
               ))}
 
             </div>
-
           ) : (
-
             <p className="admin-empty-message">
               No notifications available.
             </p>
-
           )}
 
         </section>
 
-
-        {/* LIVE CALENDAR */}
+        {/* ======================================
+            LIVE CALENDAR
+        ====================================== */}
 
         <section className="admin-dashboard-section admin-calendar-section">
 
           <div className="admin-section-heading">
-
             <div>
               <h2>
                 <CalendarDays size={20} />
@@ -805,9 +806,7 @@ function AdminDashboard() {
                 })}
               </p>
             </div>
-
           </div>
-
 
           {/* ADD REMINDER */}
 
@@ -826,7 +825,6 @@ function AdminDashboard() {
               required
             />
 
-
             <input
               type="date"
               value={reminderDate}
@@ -837,7 +835,6 @@ function AdminDashboard() {
               required
             />
 
-
             <button type="submit">
               <Plus size={17} />
               Add Reminder
@@ -845,17 +842,12 @@ function AdminDashboard() {
 
           </form>
 
-
           {/* UPCOMING EVENTS */}
 
           <div className="admin-upcoming-heading">
-
             <Clock size={18} />
-
             <h3>Upcoming Events</h3>
-
           </div>
-
 
           {upcomingEvents.length > 0 ? (
 
@@ -866,14 +858,12 @@ function AdminDashboard() {
                 const eventDate = getDate(event.date);
 
                 return (
-
                   <div
                     className="admin-event-item"
                     key={event.id}
                   >
 
                     <div className="admin-event-date">
-
                       <strong>
                         {eventDate?.getDate() ?? "–"}
                       </strong>
@@ -884,25 +874,14 @@ function AdminDashboard() {
                           { month: "short" }
                         ) ?? "N/A"}
                       </span>
-
                     </div>
-
 
                     <div className="admin-event-info">
-
-                      <strong>
-                        {event.title}
-                      </strong>
-
-                      <span>
-                        {event.type}
-                      </span>
-
+                      <strong>{event.title}</strong>
+                      <span>{event.type}</span>
                     </div>
 
-
                     {event.reminderId && (
-
                       <button
                         type="button"
                         className="admin-icon-button delete"
@@ -913,23 +892,18 @@ function AdminDashboard() {
                       >
                         <Trash2 size={17} />
                       </button>
-
                     )}
 
                   </div>
-
                 );
-
               })}
 
             </div>
 
           ) : (
-
             <p className="admin-empty-message">
               No upcoming events or reminders.
             </p>
-
           )}
 
         </section>
@@ -938,6 +912,10 @@ function AdminDashboard() {
 
     </div>
   );
+}
+
+function CheckCircle2Icon() {
+  return <ShieldCheck size={22} />;
 }
 
 export default AdminDashboard;

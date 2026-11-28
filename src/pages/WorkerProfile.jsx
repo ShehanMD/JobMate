@@ -1,12 +1,13 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import {
   ArrowLeft,
   User,
   Mail,
   Phone,
   MapPin,
-  Map,
   Briefcase,
   Calendar,
   Clock,
@@ -20,50 +21,113 @@ import {
   BarChart3,
   CheckCircle2,
 } from "lucide-react";
+
+import {
+  doc,
+  onSnapshot,
+  updateDoc,
+  serverTimestamp,
+} from "firebase/firestore";
+
+import { db } from "../firebase/firebase";
 import { useAuth } from "../context/AuthContext";
+
 import "./Profile.css";
 
+
+// ======================================
+// DISTRICTS
+// ======================================
+
 const SRI_LANKA_DISTRICTS = [
-  "Ampara", "Anuradhapura", "Badulla", "Batticaloa", "Colombo",
-  "Galle", "Gampaha", "Hambantota", "Jaffna", "Kalutara",
-  "Kandy", "Kegalle", "Kilinochchi", "Kurunegala", "Mannar",
-  "Matale", "Matara", "Monaragala", "Mullaitivu", "Nuwara Eliya",
-  "Polonnaruwa", "Puttalam", "Ratnapura", "Trincomalee", "Vavuniya",
+  "Ampara",
+  "Anuradhapura",
+  "Badulla",
+  "Batticaloa",
+  "Colombo",
+  "Galle",
+  "Gampaha",
+  "Hambantota",
+  "Jaffna",
+  "Kalutara",
+  "Kandy",
+  "Kegalle",
+  "Kilinochchi",
+  "Kurunegala",
+  "Mannar",
+  "Matale",
+  "Matara",
+  "Monaragala",
+  "Mullaitivu",
+  "Nuwara Eliya",
+  "Polonnaruwa",
+  "Puttalam",
+  "Ratnapura",
+  "Trincomalee",
+  "Vavuniya",
 ];
+
+
+// ======================================
+// WORKER SKILLS
+// ======================================
 
 const WORKER_SKILLS = [
-  "Electrician", "Plumber", "Carpenter", "Painter", "Technician",
-  "Construction Worker", "Mason", "Welder", "Mechanic", "Other",
+  "Electrician",
+  "Plumber",
+  "Carpenter",
+  "Painter",
+  "Technician",
+  "Construction Worker",
+  "Mason",
+  "Welder",
+  "Mechanic",
+  "Other",
 ];
 
+
+// ======================================
+// AVAILABILITY OPTIONS
+// ======================================
+
 const AVAILABILITY_OPTIONS = [
-  "Full-time", "Part-time", "Weekends Only", "On-Call / Contract",
+  "Full-time",
+  "Part-time",
+  "Weekends Only",
+  "On-Call / Contract",
 ];
+
+
+// ======================================
+// FORMAT DATE
+// ======================================
 
 const formatDate = (value) => {
   if (!value) return "";
-  if (typeof value === "object" && typeof value.toDate === "function") {
-    return value.toDate().toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+
+  let date;
+
+  if (typeof value.toDate === "function") {
+    date = value.toDate();
+  } else if (typeof value.seconds === "number") {
+    date = new Date(value.seconds * 1000);
+  } else {
+    date = new Date(value);
   }
-  if (typeof value === "object" && typeof value.seconds === "number") {
-    return new Date(value.seconds * 1000).toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
+
+  if (Number.isNaN(date.getTime())) return "";
+
   return date.toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric",
   });
 };
+
+
+// ======================================
+// SAFE TEXT
+// ======================================
 
 const safeText = (value) => {
   if (
@@ -74,124 +138,459 @@ const safeText = (value) => {
   ) {
     return "";
   }
+
   return String(value);
 };
 
-function WorkerProfile() {
-  const navigate = useNavigate();
-  const auth = useAuth();
-  const firebaseUser = auth?.currentUser || {};
-  const userData = auth?.userData || {};
 
-  const email = userData.email || firebaseUser.email || "";
-  const storageKey = `pattajobs_worker_profile_${email}`;
+// ======================================
+// BUILD WORKER PROFILE
+// ======================================
 
-  const buildBaseWorker = () => ({
+const buildWorkerProfile = (userData, firebaseUser) => {
+  const email = userData.email || firebaseUser?.email || "";
+
+  return {
     name:
       userData.name ||
       userData.fullName ||
-      firebaseUser.displayName ||
-      "Skilled Worker",
+      firebaseUser?.displayName ||
+      "",
+
     email,
-    phone: userData.phone || userData.phoneNumber || "",
-    location: userData.location || userData.district || "",
-    dateOfBirth: userData.dateOfBirth || userData.dob || "",
+
+    phone:
+      userData.phone ||
+      userData.phoneNumber ||
+      "",
+
+    location:
+      userData.location ||
+      userData.district ||
+      "",
+
+    dateOfBirth:
+      userData.dateOfBirth ||
+      userData.dob ||
+      "",
+
     gender: userData.gender || "",
+
     address: userData.address || "",
-    skill: userData.skill || userData.mainSkill || "",
-    experienceYears: userData.experienceYears ?? userData.experience ?? "",
+
+    skill:
+      userData.skill ||
+      userData.mainSkill ||
+      "",
+
+    experienceYears:
+      userData.experienceYears ??
+      userData.experience ??
+      "",
+
     skills: Array.isArray(userData.skills)
       ? userData.skills.join(", ")
       : userData.skills || userData.otherSkills || "",
-    qualifications: userData.qualifications || "",
-    workExperience:
-      userData.workExperience || userData.previousWorkExperience || "",
-    expectedSalary: userData.expectedSalary || "",
-    availability: userData.availability || "",
-    status: userData.status || "Active",
-    verificationStatus: userData.verificationStatus || "Pending",
-    createdAt:
-      formatDate(userData.createdAt || userData.joinedDate) ||
-      formatDate(new Date()),
-    lastActive: formatDate(userData.lastActive) || "N/A",
-    verifiedAt: formatDate(userData.verifiedAt || userData.verifiedDate) || "",
-  });
 
-  const [worker, setWorker] = useState(buildBaseWorker);
+    qualifications:
+      userData.qualifications || "",
+
+    workExperience:
+      userData.workExperience ||
+      userData.previousWorkExperience ||
+      "",
+
+    expectedSalary:
+      userData.expectedSalary || "",
+
+    availability:
+      userData.availability || "",
+
+    status: userData.status || "Active",
+
+    verificationStatus:
+      userData.verificationStatus || "Pending",
+
+    createdAt:
+      userData.createdAt || null,
+
+    lastActive:
+      userData.lastActive || null,
+
+    verifiedAt:
+      userData.verifiedAt ||
+      userData.verifiedDate ||
+      null,
+  };
+};
+
+
+// ======================================
+// WORKER PROFILE COMPONENT
+// ======================================
+
+function WorkerProfile() {
+  const navigate = useNavigate();
+
+  const { currentUser, userData } = useAuth();
+
+  const [worker, setWorker] = useState(null);
+
+  const [formData, setFormData] = useState({});
+
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [formData, setFormData] = useState(worker);
+
   const [phoneError, setPhoneError] = useState("");
 
-  useEffect(() => {
-    const base = buildBaseWorker();
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        const merged = { ...base, ...parsed, email };
-        setWorker(merged);
-        setFormData(merged);
-        return;
-      } catch {
-        // ignore invalid localStorage data
-      }
-    }
-    setWorker(base);
-    setFormData(base);
-  }, [email, auth?.userData]);
+  const [loading, setLoading] = useState(true);
 
-  const isProfileIncomplete =
+  const [saving, setSaving] = useState(false);
+
+  const [error, setError] = useState("");
+
+  const [success, setSuccess] = useState("");
+
+  
+  // ======================================
+  // FIRESTORE REAL-TIME PROFILE LISTENER
+  // ======================================
+
+  useEffect(() => {
+    if (!currentUser?.uid) {
+      setLoading(false);
+      return;
+    }
+
+    const userRef = doc(
+      db,
+      "users",
+      currentUser.uid
+    );
+
+    const unsubscribe = onSnapshot(
+      userRef,
+
+      (snapshot) => {
+        if (!snapshot.exists()) {
+          setError("User profile could not be found.");
+          setLoading(false);
+          return;
+        }
+
+        const firebaseData = snapshot.data();
+
+        const profile = buildWorkerProfile(
+          firebaseData,
+          currentUser
+        );
+
+        setWorker(profile);
+
+        setFormData(profile);
+
+        setLoading(false);
+      },
+
+      (firebaseError) => {
+        console.error(
+          "Profile loading error:",
+          firebaseError
+        );
+
+        setError(
+          "Unable to load your profile. Please try again."
+        );
+
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+
+  }, [currentUser]);
+
+
+  // ======================================
+  // PROFILE COMPLETION CHECK
+  // ======================================
+
+  const isProfileIncomplete = !worker ||
     !safeText(worker.name) ||
     !safeText(worker.phone) ||
     !safeText(worker.location) ||
     !safeText(worker.skill) ||
     !safeText(worker.address);
 
+
+  // ======================================
+  // OPEN EDIT MODAL
+  // ======================================
+
   const openEditModal = () => {
-    setFormData(worker);
+    if (!worker) return;
+
+    setFormData({ ...worker });
+
     setPhoneError("");
+    setError("");
+    setSuccess("");
+
     setIsEditOpen(true);
   };
 
+
+  // ======================================
+  // CLOSE EDIT MODAL
+  // ======================================
+
   const closeEditModal = () => {
-    setFormData(worker);
+    setFormData({ ...worker });
+
     setPhoneError("");
+
+    setError("");
+
     setIsEditOpen(false);
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+
+  // ======================================
+  // HANDLE INPUT CHANGES
+  // ======================================
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+
     if (name === "phone") {
-      const digitsOnly = value.replace(/\D/g, "").slice(0, 10);
-      setFormData((prev) => ({ ...prev, phone: digitsOnly }));
-      if (digitsOnly.length === 10 || digitsOnly.length === 0) {
+      const digitsOnly = value
+        .replace(/\D/g, "")
+        .slice(0, 10);
+
+      setFormData((previous) => ({
+        ...previous,
+        phone: digitsOnly,
+      }));
+
+      if (
+        digitsOnly.length === 10 ||
+        digitsOnly.length === 0
+      ) {
         setPhoneError("");
       }
+
       return;
     }
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    setFormData((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
   };
 
-  const handleSave = (e) => {
-    e.preventDefault();
-    if (formData.phone && formData.phone.length !== 10) {
-      setPhoneError("Phone number must be exactly 10 digits.");
+
+  // ======================================
+  // SAVE PROFILE TO FIRESTORE
+  // ======================================
+
+  const handleSave = async (event) => {
+    event.preventDefault();
+
+    if (!currentUser?.uid) {
+      setError("Please sign in again.");
       return;
     }
-    const updated = { ...worker, ...formData };
-    setWorker(updated);
-    localStorage.setItem(storageKey, JSON.stringify(updated));
-    setPhoneError("");
-    setIsEditOpen(false);
+
+    if (saving) return;
+
+    const cleanPhone = String(
+      formData.phone || ""
+    ).trim();
+
+    if (!/^\d{10}$/.test(cleanPhone)) {
+      setPhoneError(
+        "Phone number must be exactly 10 digits."
+      );
+
+      return;
+    }
+
+    if (!safeText(formData.name)) {
+      setError("Please enter your full name.");
+      return;
+    }
+
+    if (!safeText(formData.location)) {
+      setError("Please select your district.");
+      return;
+    }
+
+    if (!safeText(formData.skill)) {
+      setError("Please select your main skill.");
+      return;
+    }
+
+    if (!safeText(formData.address)) {
+      setError("Please enter your full address.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      setError("");
+
+      setSuccess("");
+
+      const userRef = doc(
+        db,
+        "users",
+        currentUser.uid
+      );
+
+      const updatedProfile = {
+        name: String(formData.name || "").trim(),
+
+        phone: cleanPhone,
+
+        location: String(
+          formData.location || ""
+        ).trim(),
+
+        dateOfBirth: formData.dateOfBirth || "",
+
+        gender: formData.gender || "",
+
+        address: String(
+          formData.address || ""
+        ).trim(),
+
+        skill: formData.skill || "",
+
+        experienceYears:
+          formData.experienceYears === ""
+            ? ""
+            : Number(formData.experienceYears),
+
+        skills: String(
+          formData.skills || ""
+        ).trim(),
+
+        qualifications: String(
+          formData.qualifications || ""
+        ).trim(),
+
+        workExperience: String(
+          formData.workExperience || ""
+        ).trim(),
+
+        expectedSalary: String(
+          formData.expectedSalary || ""
+        ).trim(),
+
+        availability: formData.availability || "",
+
+        updatedAt: serverTimestamp(),
+      };
+
+
+      // Update existing users document.
+      await updateDoc(
+        userRef,
+        updatedProfile
+      );
+
+
+      // The onSnapshot listener updates the UI.
+      setIsEditOpen(false);
+
+      setPhoneError("");
+
+      setSuccess(
+        "Your profile has been updated successfully."
+      );
+
+    } catch (firebaseError) {
+      console.error(
+        "Profile update error:",
+        firebaseError
+      );
+
+      if (
+        firebaseError.code === "permission-denied"
+      ) {
+        setError(
+          "Permission denied. Please check your Firestore security rules."
+        );
+      } else {
+        setError(
+          "Unable to update your profile. Please try again."
+        );
+      }
+
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const verificationStatus = worker.verificationStatus || "Pending";
+
+  // ======================================
+  // LOADING STATE
+  // ======================================
+
+  if (loading) {
+    return (
+      <div className="pj-profile-page">
+        <div className="pj-profile-container">
+          <p>Loading your profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+
+  // ======================================
+  // PROFILE NOT FOUND
+  // ======================================
+
+  if (!worker) {
+    return (
+      <div className="pj-profile-page">
+        <div className="pj-profile-container">
+
+          <p>
+            {error || "Profile not found."}
+          </p>
+
+          <button
+            type="button"
+            onClick={() => navigate("/dashboard")}
+          >
+            Back to Dashboard
+          </button>
+
+        </div>
+      </div>
+    );
+  }
+
+
+  const verificationStatus =
+    worker.verificationStatus || "Pending";
+
+
+  // ======================================
+  // UI
+  // ======================================
 
   return (
     <div className="pj-profile-page">
+
       <div className="pj-profile-container">
-        {/* Top-Left Back Button */}
+
+        {/* BACK BUTTON */}
+
         <div className="pj-back-row">
+
           <button
             type="button"
             className="pj-back-btn"
@@ -200,23 +599,55 @@ function WorkerProfile() {
             <ArrowLeft size={16} />
             <span>Back</span>
           </button>
+
         </div>
 
-        {/* Incomplete Profile Banner */}
+
+        {/* SUCCESS MESSAGE */}
+
+        {success && (
+          <div className="pj-success-message">
+            {success}
+          </div>
+        )}
+
+
+        {/* ERROR MESSAGE */}
+
+        {error && (
+          <div className="pj-error-message">
+            {error}
+          </div>
+        )}
+
+
+        {/* INCOMPLETE PROFILE BANNER */}
+
         {isProfileIncomplete && (
           <div className="pj-incomplete-banner">
+
             <div className="pj-incomplete-left">
+
               <div className="pj-incomplete-icon">
                 <AlertCircle size={20} />
               </div>
+
               <div>
-                <strong>Complete your worker profile</strong>
+
+                <strong>
+                  Complete your worker profile
+                </strong>
+
                 <p>
-                  Add your skills, experience, and contact details so clients
-                  can find and hire you on PattaJobs.
+                  Add your skills, experience, and contact
+                  details so clients can find and hire you
+                  on PattaJobs.
                 </p>
+
               </div>
+
             </div>
+
 
             <button
               type="button"
@@ -225,80 +656,140 @@ function WorkerProfile() {
             >
               Update Profile
             </button>
+
           </div>
         )}
 
-        {/* Hero Profile Card */}
+
+        {/* HERO PROFILE CARD */}
+
         <section className="pj-hero-card">
+
           <div className="pj-hero-left">
+
             <div className="pj-avatar-wrap">
+
               <div className="pj-avatar-circle">
                 <User size={44} strokeWidth={2} />
               </div>
-              <span className="pj-avatar-check" title={worker.status}>
+
+              <span
+                className="pj-avatar-check"
+                title={worker.status}
+              >
                 <Check size={12} strokeWidth={3} />
               </span>
+
             </div>
 
+
             <div className="pj-hero-details">
+
               <span className="pj-active-pill">
+
                 <span className="pj-active-dot" />
+
                 {worker.status} • {worker.skill || "Skilled Worker"}
+
               </span>
 
               <h1>{worker.name}</h1>
 
+
               <div className="pj-hero-meta-list">
+
                 <div className="pj-hero-meta-item">
                   <Mail size={15} />
                   <span>{worker.email}</span>
                 </div>
+
                 <div className="pj-hero-meta-item">
                   <MapPin size={15} />
+
                   <span>
                     {worker.location
                       ? `${worker.location}, Sri Lanka`
                       : "Sri Lanka"}
                   </span>
                 </div>
+
               </div>
+
             </div>
+
           </div>
+
 
           <div className="pj-hero-divider" />
 
+
           <div
             className="pj-hero-right"
-            style={{ flexDirection: "column", alignItems: "flex-start", gap: "14px" }}
+            style={{
+              flexDirection: "column",
+              alignItems: "flex-start",
+              gap: "14px",
+            }}
           >
+
             <div className="pj-member-since">
-              <Calendar size={18} className="pj-green-icon" />
+
+              <Calendar
+                size={18}
+                className="pj-green-icon"
+              />
+
               <div>
                 <span>Member Since</span>
-                <strong>{worker.createdAt}</strong>
+
+                <strong>
+                  {formatDate(worker.createdAt) || "N/A"}
+                </strong>
               </div>
+
             </div>
+
 
             <div className="pj-member-since">
-              <ShieldCheck size={18} className="pj-green-icon" />
+
+              <ShieldCheck
+                size={18}
+                className="pj-green-icon"
+              />
+
               <div>
                 <span>Verification Status</span>
+
                 <strong>{verificationStatus}</strong>
               </div>
+
             </div>
+
           </div>
+
         </section>
 
-        {/* Personal Information Card */}
+
+        {/* PERSONAL INFORMATION */}
+
         <section className="pj-card">
+
           <div className="pj-card-header">
+
             <div className="pj-card-title-group">
-              <User size={21} className="pj-green-icon" />
+
+              <User
+                size={21}
+                className="pj-green-icon"
+              />
+
               <div>
                 <h2>Personal Information</h2>
                 <p>Your account details and contact information</p>
               </div>
+
             </div>
+
 
             <button
               type="button"
@@ -308,100 +799,136 @@ function WorkerProfile() {
               <Pencil size={15} />
               <span>Edit Profile</span>
             </button>
+
           </div>
 
+
           <div className="pj-info-grid">
+
             <div className="pj-info-item">
               <Mail size={19} className="pj-info-icon" />
+
               <div className="pj-info-text">
                 <span>Email Address</span>
                 <strong>{worker.email}</strong>
               </div>
             </div>
 
+
             <div className="pj-info-item">
               <Phone size={19} className="pj-info-icon" />
+
               <div className="pj-info-text">
                 <span>Phone Number</span>
+
                 <strong className={!safeText(worker.phone) ? "pj-muted" : ""}>
                   {safeText(worker.phone) || "Not provided"}
                 </strong>
               </div>
             </div>
 
+
             <div className="pj-info-item">
               <MapPin size={19} className="pj-info-icon" />
+
               <div className="pj-info-text">
                 <span>District</span>
+
                 <strong className={!safeText(worker.location) ? "pj-muted" : ""}>
                   {safeText(worker.location) || "Not provided"}
                 </strong>
               </div>
             </div>
 
+
             <div className="pj-info-item">
               <Calendar size={19} className="pj-info-icon" />
+
               <div className="pj-info-text">
                 <span>Date of Birth</span>
+
                 <strong className={!safeText(worker.dateOfBirth) ? "pj-muted" : ""}>
-                  {safeText(worker.dateOfBirth)
-                    ? formatDate(worker.dateOfBirth)
-                    : "Not provided"}
+                  {formatDate(worker.dateOfBirth) || "Not provided"}
                 </strong>
               </div>
             </div>
 
+
             <div className="pj-info-item">
               <User size={19} className="pj-info-icon" />
+
               <div className="pj-info-text">
                 <span>Gender</span>
+
                 <strong className={!safeText(worker.gender) ? "pj-muted" : ""}>
                   {safeText(worker.gender) || "Not provided"}
                 </strong>
               </div>
             </div>
 
+
             <div className="pj-info-item">
+
               <div className="pj-info-text">
                 <span>Full Address</span>
+
                 <strong className={!safeText(worker.address) ? "pj-muted" : ""}>
                   {safeText(worker.address) || "Not provided"}
                 </strong>
               </div>
+
             </div>
+
           </div>
+
         </section>
 
-        {/* Professional Information Card */}
+
+        {/* PROFESSIONAL INFORMATION */}
+
         <section className="pj-card">
+
           <div className="pj-card-header">
+
             <div className="pj-card-title-group">
-              <Briefcase size={21} className="pj-green-icon" />
+
+              <Briefcase
+                size={21}
+                className="pj-green-icon"
+              />
+
               <div>
                 <h2>Professional Information</h2>
                 <p>Your skills, work experience, and expected rates</p>
               </div>
+
             </div>
+
           </div>
 
+
           <div className="pj-info-grid">
+
             <div className="pj-info-item">
               <Briefcase size={19} className="pj-info-icon" />
+
               <div className="pj-info-text">
                 <span>Main Skill</span>
+
                 <strong className={!safeText(worker.skill) ? "pj-muted" : ""}>
                   {safeText(worker.skill) || "Not provided"}
                 </strong>
               </div>
             </div>
 
+
             <div className="pj-info-item">
               <Clock size={19} className="pj-info-icon" />
+
               <div className="pj-info-text">
                 <span>Experience</span>
-                <strong
-                  className={!safeText(worker.experienceYears) ? "pj-muted" : ""}
-                >
+
+                <strong className={!safeText(worker.experienceYears) ? "pj-muted" : ""}>
                   {safeText(worker.experienceYears)
                     ? `${worker.experienceYears} years`
                     : "Not provided"}
@@ -409,164 +936,248 @@ function WorkerProfile() {
               </div>
             </div>
 
+
             <div className="pj-info-item">
               <Award size={19} className="pj-info-icon" />
+
               <div className="pj-info-text">
                 <span>Other Skills</span>
+
                 <strong className={!safeText(worker.skills) ? "pj-muted" : ""}>
                   {safeText(worker.skills) || "Not provided"}
                 </strong>
               </div>
             </div>
 
+
             <div className="pj-info-item">
               <FileText size={19} className="pj-info-icon" />
+
               <div className="pj-info-text">
                 <span>Qualifications</span>
-                <strong
-                  className={!safeText(worker.qualifications) ? "pj-muted" : ""}
-                >
+
+                <strong className={!safeText(worker.qualifications) ? "pj-muted" : ""}>
                   {safeText(worker.qualifications) || "Not provided"}
                 </strong>
               </div>
             </div>
 
+
             <div className="pj-info-item">
               <Briefcase size={19} className="pj-info-icon" />
+
               <div className="pj-info-text">
                 <span>Previous Work Experience</span>
-                <strong
-                  className={!safeText(worker.workExperience) ? "pj-muted" : ""}
-                >
+
+                <strong className={!safeText(worker.workExperience) ? "pj-muted" : ""}>
                   {safeText(worker.workExperience) || "Not provided"}
                 </strong>
               </div>
             </div>
 
+
             <div className="pj-info-item">
               <BarChart3 size={19} className="pj-info-icon" />
+
               <div className="pj-info-text">
                 <span>Expected Salary / Rate</span>
-                <strong
-                  className={!safeText(worker.expectedSalary) ? "pj-muted" : ""}
-                >
+
+                <strong className={!safeText(worker.expectedSalary) ? "pj-muted" : ""}>
                   {safeText(worker.expectedSalary) || "Not provided"}
                 </strong>
               </div>
             </div>
 
+
             <div className="pj-info-item">
               <Calendar size={19} className="pj-info-icon" />
+
               <div className="pj-info-text">
                 <span>Availability</span>
-                <strong
-                  className={!safeText(worker.availability) ? "pj-muted" : ""}
-                >
+
+                <strong className={!safeText(worker.availability) ? "pj-muted" : ""}>
                   {safeText(worker.availability) || "Not provided"}
                 </strong>
               </div>
             </div>
 
+
             <div className="pj-info-item">
               <ShieldCheck size={19} className="pj-info-icon" />
+
               <div className="pj-info-text">
                 <span>Verified Date</span>
+
                 <strong className={!safeText(worker.verifiedAt) ? "pj-muted" : ""}>
-                  {safeText(worker.verifiedAt) || "Not verified yet"}
+                  {formatDate(worker.verifiedAt) || "Not verified yet"}
                 </strong>
               </div>
             </div>
+
           </div>
+
         </section>
 
-        {/* Account Overview KPI Cards */}
+
+        {/* ACCOUNT OVERVIEW */}
+
         <section className="pj-card">
+
           <div className="pj-card-header">
+
             <div className="pj-card-title-group">
-              <BarChart3 size={21} className="pj-green-icon" />
+
+              <BarChart3
+                size={21}
+                className="pj-green-icon"
+              />
+
               <div>
                 <h2>Account Overview</h2>
                 <p>Summary of your PattaJobs worker account</p>
               </div>
+
             </div>
+
           </div>
 
+
           <div className="pj-kpi-grid">
+
             <div className="pj-kpi-card">
+
               <div className="pj-kpi-icon-circle">
                 <CheckCircle2 size={20} />
               </div>
+
               <div className="pj-kpi-text">
                 <strong>{worker.status}</strong>
                 <span>Account Status</span>
               </div>
+
             </div>
 
+
             <div className="pj-kpi-card">
+
               <div className="pj-kpi-icon-circle">
                 <ShieldCheck size={20} />
               </div>
+
               <div className="pj-kpi-text">
                 <strong>{verificationStatus}</strong>
                 <span>Verification Status</span>
               </div>
+
             </div>
 
+
             <div className="pj-kpi-card">
+
               <div className="pj-kpi-icon-circle">
                 <Clock size={20} />
               </div>
+
               <div className="pj-kpi-text">
-                <strong>{worker.lastActive || "N/A"}</strong>
+                <strong>
+                  {formatDate(worker.lastActive) || "N/A"}
+                </strong>
+
                 <span>Last Active</span>
               </div>
+
             </div>
+
           </div>
+
         </section>
+
       </div>
 
-      {/* Edit Worker Profile Modal */}
+
+      {/* EDIT PROFILE MODAL */}
+
       {isEditOpen && (
-        <div className="pj-modal-overlay" onClick={closeEditModal}>
-          <div className="pj-modal-card" onClick={(e) => e.stopPropagation()}>
+
+        <div
+          className="pj-modal-overlay"
+          onClick={closeEditModal}
+        >
+
+          <div
+            className="pj-modal-card"
+            onClick={(event) => event.stopPropagation()}
+          >
+
             <div className="pj-modal-header">
+
               <div>
                 <h2>Edit Worker Profile</h2>
-                <p>Update your personal and professional details.</p>
+
+                <p>
+                  Update your personal and professional details.
+                </p>
               </div>
+
+
               <button
                 type="button"
                 className="pj-modal-close-btn"
                 onClick={closeEditModal}
+                disabled={saving}
               >
                 <X size={20} />
               </button>
+
             </div>
 
-            <form className="pj-modal-form" onSubmit={handleSave}>
+
+            <form
+              className="pj-modal-form"
+              onSubmit={handleSave}
+            >
+
               <div className="pj-form-grid">
+
+                {/* NAME */}
+
                 <div className="pj-form-group">
+
                   <label>Full Name</label>
+
                   <input
                     name="name"
                     value={formData.name || ""}
                     onChange={handleChange}
                     required
+                    disabled={saving}
                   />
+
                 </div>
 
+
+                {/* EMAIL */}
+
                 <div className="pj-form-group">
+
                   <label>Email Address</label>
+
                   <input
                     type="email"
                     value={formData.email || ""}
                     disabled
                     className="pj-input-disabled"
                   />
+
                 </div>
 
+
+                {/* PHONE */}
+
                 <div className="pj-form-group">
+
                   <label>Phone Number (10 Digits)</label>
+
                   <input
                     type="tel"
                     name="phone"
@@ -574,163 +1185,301 @@ function WorkerProfile() {
                     onChange={handleChange}
                     maxLength={10}
                     placeholder="07XXXXXXXX"
+                    disabled={saving}
                   />
+
                   {phoneError && (
-                    <span className="pj-field-error">{phoneError}</span>
+                    <span className="pj-field-error">
+                      {phoneError}
+                    </span>
                   )}
+
                 </div>
 
+
+                {/* DISTRICT */}
+
                 <div className="pj-form-group">
+
                   <label>District</label>
+
                   <select
                     name="location"
                     value={formData.location || ""}
                     onChange={handleChange}
+                    disabled={saving}
                   >
-                    <option value="">Select District</option>
-                    {SRI_LANKA_DISTRICTS.map((d) => (
-                      <option key={d} value={d}>
-                        {d}
+                    <option value="">
+                      Select District
+                    </option>
+
+                    {SRI_LANKA_DISTRICTS.map((district) => (
+                      <option
+                        key={district}
+                        value={district}
+                      >
+                        {district}
                       </option>
                     ))}
+
                   </select>
+
                 </div>
 
+
+                {/* DATE OF BIRTH */}
+
                 <div className="pj-form-group">
+
                   <label>Date of Birth</label>
+
                   <input
                     type="date"
                     name="dateOfBirth"
                     value={formData.dateOfBirth || ""}
                     onChange={handleChange}
+                    disabled={saving}
                   />
+
                 </div>
 
+
+                {/* GENDER */}
+
                 <div className="pj-form-group">
+
                   <label>Gender</label>
+
                   <select
                     name="gender"
                     value={formData.gender || ""}
                     onChange={handleChange}
+                    disabled={saving}
                   >
-                    <option value="">Select Gender</option>
+                    <option value="">
+                      Select Gender
+                    </option>
+
                     <option value="Male">Male</option>
+
                     <option value="Female">Female</option>
+
                     <option value="Other">Other</option>
+
                   </select>
+
                 </div>
 
+
+                {/* ADDRESS */}
+
                 <div className="pj-form-group">
+
                   <label>Full Address</label>
+
                   <input
                     name="address"
                     value={formData.address || ""}
                     onChange={handleChange}
                     placeholder="Enter home address"
+                    disabled={saving}
                   />
+
                 </div>
 
+
+                {/* MAIN SKILL */}
+
                 <div className="pj-form-group">
+
                   <label>Main Skill</label>
+
                   <select
                     name="skill"
                     value={formData.skill || ""}
                     onChange={handleChange}
+                    disabled={saving}
                   >
-                    <option value="">Select Main Skill</option>
-                    {WORKER_SKILLS.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
+                    <option value="">
+                      Select Main Skill
+                    </option>
+
+                    {WORKER_SKILLS.map((skill) => (
+                      <option
+                        key={skill}
+                        value={skill}
+                      >
+                        {skill}
                       </option>
                     ))}
+
                   </select>
+
                 </div>
 
+
+                {/* EXPERIENCE */}
+
                 <div className="pj-form-group">
+
                   <label>Experience (Years)</label>
+
                   <input
                     type="number"
                     name="experienceYears"
-                    value={formData.experienceYears || ""}
+                    value={formData.experienceYears ?? ""}
                     onChange={handleChange}
                     min="0"
                     placeholder="e.g., 3"
+                    disabled={saving}
                   />
+
                 </div>
 
+
+                {/* OTHER SKILLS */}
+
                 <div className="pj-form-group">
+
                   <label>Other Skills</label>
+
                   <input
                     name="skills"
                     value={formData.skills || ""}
                     onChange={handleChange}
                     placeholder="e.g., AC Repair, CCTV"
+                    disabled={saving}
                   />
+
                 </div>
 
+
+                {/* QUALIFICATIONS */}
+
                 <div className="pj-form-group">
+
                   <label>Qualifications</label>
+
                   <input
                     name="qualifications"
                     value={formData.qualifications || ""}
                     onChange={handleChange}
                     placeholder="e.g., NVQ Level 4"
+                    disabled={saving}
                   />
+
                 </div>
 
+
+                {/* WORK EXPERIENCE */}
+
                 <div className="pj-form-group">
+
                   <label>Previous Work Experience</label>
+
                   <input
                     name="workExperience"
                     value={formData.workExperience || ""}
                     onChange={handleChange}
                     placeholder="e.g., ABC Electricals"
+                    disabled={saving}
                   />
+
                 </div>
 
+
+                {/* EXPECTED RATE */}
+
                 <div className="pj-form-group">
+
                   <label>Expected Salary / Rate</label>
+
                   <input
                     name="expectedSalary"
                     value={formData.expectedSalary || ""}
                     onChange={handleChange}
                     placeholder="e.g., Rs. 3,500 / day"
+                    disabled={saving}
                   />
+
                 </div>
 
+
+                {/* AVAILABILITY */}
+
                 <div className="pj-form-group">
+
                   <label>Availability</label>
+
                   <select
                     name="availability"
                     value={formData.availability || ""}
                     onChange={handleChange}
+                    disabled={saving}
                   >
-                    <option value="">Select Availability</option>
-                    {AVAILABILITY_OPTIONS.map((a) => (
-                      <option key={a} value={a}>
-                        {a}
+                    <option value="">
+                      Select Availability
+                    </option>
+
+                    {AVAILABILITY_OPTIONS.map((option) => (
+                      <option
+                        key={option}
+                        value={option}
+                      >
+                        {option}
                       </option>
                     ))}
+
                   </select>
+
                 </div>
+
               </div>
 
+
+              {/* SAVE ERROR */}
+
+              {error && (
+                <div className="auth-error" role="alert">
+                  {error}
+                </div>
+              )}
+
+
+              {/* MODAL FOOTER */}
+
               <div className="pj-modal-footer">
+
                 <button
                   type="button"
                   className="pj-btn-cancel"
                   onClick={closeEditModal}
+                  disabled={saving}
                 >
                   Cancel
                 </button>
-                <button type="submit" className="pj-btn-save">
-                  Save Changes
+
+
+                <button
+                  type="submit"
+                  className="pj-btn-save"
+                  disabled={saving}
+                >
+                  {saving
+                    ? "Saving..."
+                    : "Save Changes"}
                 </button>
+
               </div>
+
             </form>
+
           </div>
+
         </div>
+
       )}
+
     </div>
   );
 }
