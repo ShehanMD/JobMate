@@ -195,7 +195,7 @@ function WorkerProfile() {
           <button
             type="button"
             className="pj-back-btn"
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate("/worker-dashboard")}
           >
             <ArrowLeft size={16} />
             <span>Back</span>

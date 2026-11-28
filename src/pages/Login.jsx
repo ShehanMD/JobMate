@@ -139,7 +139,7 @@ function Login() {
     } else {
 
       // Job Seeker Dashboard.
-      navigate("/dashboard", {
+      navigate("/jobs", {
         replace: true,
       });
 
