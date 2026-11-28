@@ -510,6 +510,246 @@
   border-color: #107a4e;
 }
 
+
+/* ======================================
+   WORKER MANAGEMENT TABS
+====================================== */
+
+.mw-tab-navigation {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 25px 0;
+  padding: 7px;
+  background: #f0f4f2;
+  border-radius: 12px;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.mw-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: #64748b;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.mw-tab-btn:hover {
+  color: #087653;
+}
+
+.mw-tab-btn.active {
+  background: #ffffff;
+  color: #07865b;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.07);
+}
+
+.mw-tab-count,
+.mw-pending-count {
+  min-width: 23px;
+  height: 23px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  border-radius: 20px;
+  background: #e3f5ed;
+  color: #087653;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.mw-pending-count {
+  background: #fff0d5;
+  color: #a86608;
+}
+
+
+/* ======================================
+   WORKER STATUS BADGES
+====================================== */
+
+.worker-status-badge.pending {
+  background: #fff3d7;
+  color: #a66a00;
+}
+
+.worker-status-badge.verified {
+  background: #def7e9;
+  color: #087c4d;
+}
+
+.worker-status-badge.rejected {
+  background: #fee6e6;
+  color: #c12d36;
+}
+
+.worker-status-badge.expired {
+  background: #e9edf1;
+  color: #586677;
+}
+
+.worker-status-badge.draft {
+  background: #edf0f4;
+  color: #64748b;
+}
+
+
+/* ======================================
+   POST APPROVAL BUTTONS
+====================================== */
+
+.mw-approve-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 7px;
+  color: #ffffff;
+  background: #159b65;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mw-approve-btn:hover {
+  background: #087b4e;
+  transform: translateY(-2px);
+}
+
+.mw-approve-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+
+/* ======================================
+   POST DETAILS MODAL
+====================================== */
+
+.mw-post-modal {
+  max-height: 88vh;
+  overflow-y: auto;
+}
+
+.mw-post-details {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  padding: 22px 0;
+  color: #334155;
+}
+
+.mw-post-details h3 {
+  margin: 0 0 8px;
+  color: #102b27;
+  font-size: 21px;
+  line-height: 1.4;
+}
+
+.mw-post-details > p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.mw-post-details strong {
+  color: #183c31;
+}
+
+.mw-post-description {
+  padding: 16px;
+  border-radius: 10px;
+  background: #f3f7f5;
+  line-height: 1.7;
+}
+
+.mw-post-description p {
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #52635d;
+}
+
+.mw-approve-post-btn,
+.mw-reject-post-btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 17px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mw-approve-post-btn {
+  color: #ffffff;
+  background: #159b65;
+}
+
+.mw-approve-post-btn:hover {
+  background: #087b4e;
+}
+
+.mw-reject-post-btn {
+  color: #ffffff;
+  background: #dc4b51;
+}
+
+.mw-reject-post-btn:hover {
+  background: #bd3038;
+}
+
+.mw-approve-post-btn:disabled,
+.mw-reject-post-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+
+/* ======================================
+   RESPONSIVE
+====================================== */
+
+@media (max-width: 650px) {
+  .mw-tab-navigation {
+    width: 100%;
+    gap: 5px;
+  }
+
+  .mw-tab-btn {
+    flex: 1;
+    padding: 11px 9px;
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .mw-pending-count,
+  .mw-tab-count {
+    min-width: 20px;
+    height: 20px;
+    font-size: 11px;
+  }
+
+  .mw-post-modal {
+    width: 95%;
+  }
+}
+
+
 /* Modal Animations */
 
 @keyframes workerOverlayFade {
