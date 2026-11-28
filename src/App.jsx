@@ -100,7 +100,7 @@ function AppContent() {
 
           {/* User Pages */}
           <Route
-            path="/dashboard"
+            path="/jobs"
             element={
               <ProtectedRoute allowedRole="user">
                 <UserDashboard />

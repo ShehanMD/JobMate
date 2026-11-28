@@ -222,7 +222,7 @@ function Profile() {
           <button
             type="button"
             className="pj-back-btn"
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate("/jobs")}
           >
             <ArrowLeft size={16} />
             <span>Back</span>
